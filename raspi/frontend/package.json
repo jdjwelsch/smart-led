@@ -10,8 +10,10 @@
   "dependencies": {
     "axios": "^0.18.1",
     "core-js": "^3.6.4",
+    "reinvented-color-wheel": "^0.2.9",
     "socket.io-client": "^2.3.0",
     "vue": "^2.6.11",
+    "vue-color": "^2.7.1",
     "vue-range-slider": "^0.6.0",
     "vue-socket.io": "^3.0.7",
     "vuetify": "^2.2.20"
