@@ -1,20 +1,9 @@
 <template>
     <div id="SingleLedControl">
-        <button @click='toggle()'>On/Off</button>
-        <span v-show='power'>LED on</span>
-        <span v-show='!power'>LED off</span>
+        <button @click='toggle()'>{{button_state}}</button>
 
-        <range-slider
-                class="slider"
-                min="0"
-                max="100"
-                step="1"
-                v-model="brightnessSliderVal">
-        </range-slider>
-
-        <div id="hsv">
-            <h2>Here should be the HSV slider</h2>
-            <slider-picker v-model="hslColor"></slider-picker>
+        <div id="ChromePicker">
+            <chrome-picker class='picker' v-model="colors" :style="{width:'400px'}"></chrome-picker>
         </div>
 
     </div>
@@ -22,93 +11,105 @@
 
 <script>
     import axios from 'axios';
-    import RangeSlider from 'vue-range-slider';
-    import 'vue-range-slider/dist/vue-range-slider.css';
-    import {Slider} from 'vue-color';
+    import {Chrome} from 'vue-color';
 
 
     export default {
         name: 'SingleLedControl',
         components: {
-            RangeSlider,
-            'slider-picker': Slider,
+            'chrome-picker': Chrome,
+
         },
         props: ['name'],
 
         data: function () {
             return {
                 power: false,
+                button_state: 'LED on',
                 brightnessSliderVal: 50,
-                hslColor: {r: 127, g: 100, b: 0.5}
+                colors: {
+                    hex: '#194d33',
+                    hsl: {h: 150, s: 0.5, l: 0.2, a: 1},
+                    hsv: {h: 150, s: 0.66, v: 0.30, a: 1},
+                    rgba: {r: 25, g: 77, b: 51, a: 1},
+                    a: 1
+                }
             }
         },
-        methods: {
-            toggle: function () {
-                this.power = !this.power;
-                this.switch_led(this.power);
-            },
+        methods:
+            {
+                toggle: function () {
+                    this.power = !this.power;
+                    this.switch_led(this.power);
 
-            switch_led: function (state) {
-                const path = 'http://192.168.0.78:5000/devices/' + this.name;
-                const rgb_off = {'r': 0, 'g': 0, 'b': 0};
-
-                if (state) {
-                    axios.put(path, {'r': this.hslColor.rgba.r, 'g': this.hslColor.rgba.g, 'b': this.hslColor.rgba.b});
-                    console.log({'r': this.hslColor.rgba.r, 'g': this.hslColor.rgba.g, 'b': this.hslColor.rgba.b});
+                    if (this.power) {
+                        this.button_state = 'LED off'
+                    } else {
+                        this.button_state = 'LED on'
+                    }
                 }
+                ,
 
-                if (!state) {
-                    axios.put(path, rgb_off);
+                switch_led: function (state) {
+                    const path = 'http://192.168.0.78:5000/devices/' + this.name;
+                    const rgb_off = {'r': 0, 'g': 0, 'b': 0};
+
+                    if (state) {
+                        axios.put(path, {
+                            'r': this.colors.rgba.r,
+                            'g': this.colors.rgba.g,
+                            'b': this.colors.rgba.b,
+                        });
+                        console.log({
+                            'r': this.colors.rgba.r,
+                            'g': this.colors.rgba.g,
+                            'b': this.colors.rgba.b,
+                        });
+                    }
+
+                    if (!state) {
+                        axios.put(path, rgb_off);
+                    }
                 }
+                ,
+
+                set_color() {
+                    const path = 'http://192.168.0.78:5000/devices/' + this.name
+                    const rgb = {
+                        'r': this.colors.rgba.r,
+                        'g': this.colors.rgba.g,
+                        'b': this.colors.rgba.b,
+                    };
+                    axios.put(path, rgb);
+
+                },
             },
-
-            set_led_brightness: function (val) {
-                this.hslColor.hsl.l = val / 100;
-                console.log(this.hslColor)
-                const path = 'http://192.168.0.78:5000/devices/' + this.name
-                const rgb = {'r': this.hslColor.rgba.r, 'g': this.hslColor.rgba.g, 'b': this.hslColor.rgba.b};
-                axios.put(path, rgb);
-
-            },
-
-            set_color() {
-                // TODO send RGB color to backend
-                const path = 'http://192.168.0.78:5000/devices/' + this.name
-                const rgb = {'r': this.hslColor.rgba.r, 'g': this.hslColor.rgba.g, 'b': this.hslColor.rgba.b};
-                axios.put(path, rgb);
-
-            },
-        },
 
         watch: {
-            brightnessSliderVal() {
-                this.set_led_brightness();
-            },
-
-
-            hslColor(hslColor) {
-                //hsv2rgb()
-                console.log(hslColor.rgba.r);
-                console.log(hslColor.rgba.g);
-                console.log(hslColor.rgba.b);
-                this.set_color();
-
-                if (hslColor.hsl.l > 0){
+            colors() {
+                this.set_color()
+                if (this.colors.hsl.l > 0) {
                     this.power = true;
                 }
 
-            }
-
+            },
         },
 
         created() {
-            console.log(Slider)
-            console.log(this.hslColor)
+            console.log(Chrome);
+            console.log(this.colors);
         }
 
     }
 </script>
-
 <style scoped>
+    button {
+        width: 50%;
+        height: 40px;
+    }
 
+
+    div {
+        margin: auto;
+    }
 </style>
