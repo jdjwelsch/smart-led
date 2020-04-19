@@ -1,6 +1,10 @@
 <template>
   <div id="app">
-    <SingleLedControl name="led1"></SingleLedControl>
+    <H2>LED Jona</H2>
+    <SingleLedControl name="led1" :server-ip="server_ip"></SingleLedControl>
+
+    <H2>LED Wohnzimmer</H2>
+    <SingleLedControl name="led2" :server-ip="server_ip"></SingleLedControl>
   </div>
 </template>
 
@@ -18,6 +22,11 @@ export default {
   components: {
     SingleLedControl
   },
+  data: function () {
+    return {
+      server_ip: '192.168.0.9',
+    }
+  }
 }
 </script>
 

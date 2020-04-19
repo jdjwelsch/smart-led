@@ -20,7 +20,7 @@
             'chrome-picker': Chrome,
 
         },
-        props: ['name'],
+        props: ['name', 'ServerIp'],
 
         data: function () {
             return {
@@ -29,11 +29,12 @@
                 brightnessSliderVal: 50,
                 colors: {
                     hex: '#194d33',
-                    hsl: {h: 150, s: 0.5, l: 0.2, a: 1},
+                    hsl: {h: 27, s: 1, l: 0.35, a: 1},
                     hsv: {h: 150, s: 0.66, v: 0.30, a: 1},
-                    rgba: {r: 25, g: 77, b: 51, a: 1},
+                    rgba: {r: 100, g: 50, b: 0, a: 1},
                     a: 1
-                }
+                },
+                device_path : 'http://' + this.ServerIp + ':4999/devices/' + this.name,
             }
         },
         methods:
@@ -51,15 +52,15 @@
                 ,
 
                 switch_led: function (state) {
-                    const path = 'http://192.168.0.78:5000/devices/' + this.name;
                     const rgb_off = {'r': 0, 'g': 0, 'b': 0};
 
                     if (state) {
-                        axios.put(path, {
+                        axios.put(this.device_path, {
                             'r': this.colors.rgba.r,
                             'g': this.colors.rgba.g,
                             'b': this.colors.rgba.b,
                         });
+                        console.log(this.device_path);
                         console.log({
                             'r': this.colors.rgba.r,
                             'g': this.colors.rgba.g,
@@ -68,19 +69,18 @@
                     }
 
                     if (!state) {
-                        axios.put(path, rgb_off);
+                        axios.put(this.device_path, rgb_off);
                     }
                 }
                 ,
 
                 set_color() {
-                    const path = 'http://192.168.0.78:5000/devices/' + this.name
                     const rgb = {
                         'r': this.colors.rgba.r,
                         'g': this.colors.rgba.g,
                         'b': this.colors.rgba.b,
                     };
-                    axios.put(path, rgb);
+                    axios.put(this.device_path, rgb);
 
                 },
             },
