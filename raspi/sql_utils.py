@@ -2,6 +2,12 @@ import sqlite3
 
 
 def _create_db_connection(db_path):
+    """
+    Establish connection to data base.
+
+    :param db_path: string, path to .db file
+    :return: connection object
+    """
     conn = None
     try:
         conn = sqlite3.connect(db_path)
@@ -12,6 +18,12 @@ def _create_db_connection(db_path):
 
 
 def create_devices_table(db_path):
+    """
+    Creates a SQL table in which device properties are stored.
+
+    Table is created in database found at db_path. If the table already exists, nothing happens.
+    :param db_path: string, path to .db file
+    """
     conn = None
     try:
         # connect to database and create file, if it does not exist
@@ -38,7 +50,12 @@ def create_devices_table(db_path):
 
 
 def create_device_sql(db_path, device_dict):
+    """
+    Create row for new device in devices table.
 
+    :param db_path: string, path to .db file
+    :param device_dict: dictionary containing keys 'name', 'ip', 'r', 'g', 'b' for new device
+    """
     conn = None
     try:
         print('Write device to sql database')
@@ -67,7 +84,13 @@ def create_device_sql(db_path, device_dict):
 
 
 def update_device_ip_sql(db_path, device_name, ip):
+    """
+    Update the ip adress of an already existing device.
 
+    :param db_path: string, path to .db file
+    :param device_name: string, name of the device whose IP address will be updated
+    :param ip: string, new ip address
+    """
     conn = None
     try:
         conn = _create_db_connection(db_path)
@@ -89,7 +112,13 @@ def update_device_ip_sql(db_path, device_name, ip):
 
 
 def set_device_status_sql(db_path, device_name, status_dict):
+    """
+    Set the status (i. e. RGB values) of a device.
 
+    :param db_path: string, path to .db file
+    :param device_name: string, name of device
+    :param status_dict: dict, containing keys 'r', 'g', 'b'
+    """
     conn = None
     try:
         conn = _create_db_connection(db_path)
@@ -119,6 +148,13 @@ def set_device_status_sql(db_path, device_name, status_dict):
 
 
 def get_device_status_sql(db_path, device_name):
+    """
+    Get properties of a device.
+
+    :param db_path: string, path to .db file
+    :param device_name: string, name of device
+    :return: dict, containing keys 'ip', 'r', 'g', 'b' for device with device_name
+    """
     conn = None
     try:
         conn = _create_db_connection(db_path)
@@ -145,7 +181,12 @@ def get_device_status_sql(db_path, device_name):
 
 
 def get_device_list_sql(db_path):
+    """
+    Get list of all devices registered in database.
 
+    :param db_path: string, path to .db file
+    :return: list of strings, containing all device_names present in data base.
+    """
     conn = None
     try:
         conn = _create_db_connection(db_path)
