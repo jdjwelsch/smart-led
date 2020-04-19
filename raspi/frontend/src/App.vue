@@ -1,17 +1,19 @@
 <template>
   <div id="app">
     <H2>LED Jona</H2>
-    <SingleLedControl name="led1" :server-ip="server_ip"></SingleLedControl>
+    <VerticalSingleLedControl name="led1" :server-ip="server_ip"></VerticalSingleLedControl>
 
     <H2>LED Wohnzimmer</H2>
-    <SingleLedControl name="led2" :server-ip="server_ip"></SingleLedControl>
+    <VerticalSingleLedControl name="led2" :server-ip="server_ip"></VerticalSingleLedControl>
   </div>
 </template>
 
 <script>
 
 import 'vue-range-slider/dist/vue-range-slider.css'
-import SingleLedControl from "./components/SingleLedControl";
+// import SingleLedControl from "./components/SingleLedControl";
+import VerticalSingleLedControl from "./components/VerticalSingleLedControl";
+
 
 // TODO: get devices from backend
 // TODO: construct controls for each device
@@ -20,7 +22,7 @@ import SingleLedControl from "./components/SingleLedControl";
 export default {
   name: 'App',
   components: {
-    SingleLedControl
+    VerticalSingleLedControl
   },
   data: function () {
     return {
