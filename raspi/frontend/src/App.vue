@@ -24,7 +24,7 @@ export default {
   },
   data: function () {
     return {
-      server_ip: '192.168.0.9',
+      server_ip: '192.168.0.78',
     }
   }
 }

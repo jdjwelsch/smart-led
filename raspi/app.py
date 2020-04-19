@@ -2,13 +2,22 @@ from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import requests
 
+from sql_utils import create_devices_table, create_device_sql, set_device_status_sql, \
+    get_device_status_sql, get_device_list_sql, update_device_ip_sql
+
+
 app = Flask(__name__)
-
-
-# TODO: replace dict with SQLite database
-global devices_dict
-devices_dict = {}
 CORS(app, resources={r'/*': {'origins': '*'}})
+db_file = 'db/devices.db'
+
+
+@app.before_first_request
+def set_up_database():
+    """
+    Set up SQLite data base to store registered devices and their status.
+    """
+    print('Database set up started.')
+    create_devices_table(db_file)
 
 
 @app.route('/devices', methods=['GET', 'POST'])
@@ -19,21 +28,30 @@ def register_device():
     New devices are expected to send a POST request with a json containing fields 'ip' and 'name'.
     :return:
     """
+    device_list = get_device_list_sql(db_file)
+
     if request.method == 'POST':
         name = request.json['name']
         ip = request.json['ip']
 
-        if name in devices_dict:
-            print(f'device {name} already exists')
+        if name in device_list:
+            update_device_ip_sql(db_file, name, ip)
+            print('device %s already exists' % name)
             msg = {'message': 'device already exists'}
             return jsonify(msg)
+
         else:
-            devices_dict.update({name: {'ip': ip, 'r': 0, 'g': 0, 'b': 0}})
-            print(f'device {name} registered at {ip}.')
+            create_device_sql(db_file,
+                              {'name': name,
+                               'ip': ip,
+                               'r': 0,
+                               'g': 0,
+                               'b': 0})
+            print('device %s registered at %s.' % (name, ip))
             return Response("{'message': 'device created'}", status=201, mimetype='application/json')
 
     if request.method == 'GET':
-        return jsonify(devices_dict)
+        return jsonify(device_list)
 
 
 @app.route('/devices/<name>', methods=['GET', 'PUT'])
@@ -44,7 +62,8 @@ def device_status(name):
     :return:
     """
     if request.method == 'GET':
-        return jsonify(devices_dict[name])
+        device_status = get_device_status_sql(db_file, name)
+        return jsonify(device_status)
 
     if request.method == 'PUT':
         status_dict = {}
@@ -52,8 +71,11 @@ def device_status(name):
             if color in request.json:
                 color_value = request.json[color]
                 status_dict.update({color: color_value})
-        devices_dict[name].update(status_dict)
 
+        # update server data base
+        set_device_status_sql(db_file, device_name=name, status_dict=status_dict)
+
+        # send update to device
         set_device_status(name, status_dict)
 
         return Response("{'message': 'status changed'}", status=201, mimetype='application/json')
@@ -67,18 +89,17 @@ def set_device_status(device_name, status_dict):
     :param status_dict: dictionary containing key-value pairs to be set
     :return:
     """
-    ip = devices_dict[device_name]['ip']
+    device_info = get_device_status_sql(db_file, device_name)
+    ip = device_info['ip']
     url = 'http://' + ip + ':80/leds'
-    print(f'send {status_dict} to {url}')
+    print('send to %s' % url)
     requests.put(url, json=status_dict)
 
 
 @app.route('/')
-def hello_world():
-    return 'Welcome to LED control'
-
-# TODO add basic buttons for wifi controller
+def welcome():
+    return 'Welcome to LED control backend'
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True)
+    app.run(host='0.0.0.0', debug=True, port=4999)
