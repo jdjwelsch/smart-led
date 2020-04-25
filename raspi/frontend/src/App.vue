@@ -3,7 +3,7 @@
     <H2>LED Jona</H2>
     <VerticalSingleLedControl name="led1" :server-ip="server_ip"></VerticalSingleLedControl>
 
-    <H2>LED Wohnzimmer</H2>
+    <H2>LED Kueche</H2>
     <VerticalSingleLedControl name="led2" :server-ip="server_ip"></VerticalSingleLedControl>
   </div>
 </template>

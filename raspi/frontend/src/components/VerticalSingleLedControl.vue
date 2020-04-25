@@ -31,7 +31,7 @@
         data: function () {
             return {
                 power: false,
-                hue: 0,
+                hue: 25,
                 saturation: 100,
                 luminosity: 50,
 
@@ -81,18 +81,15 @@
             },
 
         watch: {
-            colors() {
-                this.set_color()
-                if (this.colors.hsl.l > 0) {
-                    this.power = true;
-                }
-            },
             power() {
                 this.switch_led(this.power)
             },
 
             rgb() {
                 this.set_color();
+                if (this.luminosity > 0) {
+                    this.power = true;
+                }
             }
         },
 

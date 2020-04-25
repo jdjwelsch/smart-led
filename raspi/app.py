@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import requests
+import time
 
 from sql_utils import create_devices_table, create_device_sql, set_device_status_sql, \
     get_device_status_sql, get_device_list_sql, update_device_ip_sql
@@ -9,6 +10,9 @@ from sql_utils import create_devices_table, create_device_sql, set_device_status
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
 db_file = 'db/devices.db'
+# last time point at which a request was send: dirty way of ensuring that not too many requests are send
+global last_request_send
+last_request_send = 0
 
 
 @app.before_first_request
@@ -89,11 +93,17 @@ def set_device_status(device_name, status_dict):
     :param status_dict: dictionary containing key-value pairs to be set
     :return:
     """
-    device_info = get_device_status_sql(db_file, device_name)
-    ip = device_info['ip']
-    url = 'http://' + ip + ':80/leds'
-    print('send to %s' % url)
-    requests.put(url, json=status_dict)
+    global last_request_send
+    current_time = time.time()
+    if (current_time - last_request_send) > 0.2:
+        last_request_send = current_time
+        device_info = get_device_status_sql(db_file, device_name)
+        ip = device_info['ip']
+        url = 'http://' + ip + ':80/leds'
+        print('send to %s' % url)
+        requests.put(url, json=status_dict)
+    else:
+        print('too little time has passed')
 
 
 @app.route('/')
