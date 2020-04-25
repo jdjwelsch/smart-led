@@ -1,10 +1,18 @@
 <template>
     <div id="app">
-        <H2>LED Jona</H2>
+        <!-- <H2>LED Jona</H2>
         <VerticalSingleLedControl name="led1" :server-ip="server_ip"></VerticalSingleLedControl>
 
         <H2>LED Kueche</H2>
-        <VerticalSingleLedControl name="led2" :server-ip="server_ip"></VerticalSingleLedControl>
+        <VerticalSingleLedControl name="led2" :server-ip="server_ip"></VerticalSingleLedControl> -->
+
+        <VerticalSingleLedControl
+            v-for="(initialData, i) in state"
+            :name="initialData.name"
+            :server-ip="server_ip"
+            :initialData="initialData.state"
+            :key="i"
+        />
     </div>
 </template>
 
@@ -13,8 +21,6 @@
     import 'vue-range-slider/dist/vue-range-slider.css'
     // import SingleLedControl from "./components/SingleLedControl";
     import VerticalSingleLedControl from "./components/VerticalSingleLedControl";
-    import io from "socket.io-client";
-    import VueSocketIO from 'vue-socket.io';
 
     // TODO: get devices from backend
     // TODO: construct controls for each device
@@ -28,9 +34,9 @@
         data: function () {
             return {
                 server_ip: '192.168.0.78',
-                socket: io(),
                 isConnected: false,
-                socketMessage: ''
+                socketMessage: '',
+                state: [],
             }
         },
         sockets: {
@@ -40,13 +46,14 @@
             },
             disconnect() {
                 this.isConnected = false;
+            },
+            stateUpdate(state) {
+                this.state = state
+                console.log(this.state)
             }
         },
-
-        created() {
-            this.socket.on('connect', function () {
-                this.socket.emit('my event', {data: 'I\'m connected!'});
-            });
+        mounted() {
+            this.$socket.emit('getState')
         }
     }
 </script>

@@ -26,7 +26,7 @@
             'switches': Switches,
             ColorPicker
         },
-        props: ['name', 'ServerIp'],
+        props: ['name', 'ServerIp', 'initialData'],
 
         data: function () {
             return {

@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, Response
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import requests
 import time
@@ -10,7 +10,7 @@ from sql_utils import create_devices_table, create_device_sql, set_device_status
 
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
-socketio = SocketIO(app)
+socketio = SocketIO(app, path='/ws/socket.io')
 db_file = 'db/devices.db'
 # last time point at which a request was send: dirty way of ensuring that not too many requests are send
 global last_request_send
@@ -109,14 +109,16 @@ def set_device_status(device_name, status_dict):
         print('too little time has passed')
 
 
-@socketio.on('connection')
-def client_has_connected(connection):
+@socketio.on('connect')
+def client_has_connected():
     print("A client has connected")
 
 
-@socketio.on('my event')
-def client_has_connected(connection):
-    print("A client has connected")
+@socketio.on('getState')
+def test_event():
+    device_list = get_device_list_sql(db_file)
+    dummy_update = [{'name': d, 'initialData': 'test'} for d in device_list]
+    emit('stateUpdate', dummy_update)
 
 
 @app.route('/')
