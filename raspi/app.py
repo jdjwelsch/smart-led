@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, Response
+from flask_socketio import SocketIO
 from flask_cors import CORS
 import requests
 import time
@@ -9,6 +10,7 @@ from sql_utils import create_devices_table, create_device_sql, set_device_status
 
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
+socketio = SocketIO(app)
 db_file = 'db/devices.db'
 # last time point at which a request was send: dirty way of ensuring that not too many requests are send
 global last_request_send
@@ -57,7 +59,7 @@ def register_device():
     if request.method == 'GET':
         return jsonify(device_list)
 
-
+# TODO: replace with sockets?
 @app.route('/devices/<name>', methods=['GET', 'PUT'])
 def device_status(name):
     """
@@ -95,15 +97,26 @@ def set_device_status(device_name, status_dict):
     """
     global last_request_send
     current_time = time.time()
-    if (current_time - last_request_send) > 0.2:
+    if (current_time - last_request_send) > 0.1:
         last_request_send = current_time
         device_info = get_device_status_sql(db_file, device_name)
         ip = device_info['ip']
         url = 'http://' + ip + ':80/leds'
         print('send to %s' % url)
         requests.put(url, json=status_dict)
+        # TODO: broadcast new status to all connected clients
     else:
         print('too little time has passed')
+
+
+@socketio.on('connection')
+def client_has_connected(connection):
+    print("A client has connected")
+
+
+@socketio.on('my event')
+def client_has_connected(connection):
+    print("A client has connected")
 
 
 @app.route('/')
@@ -112,4 +125,5 @@ def welcome():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=4999)
+    # app.run(host='0.0.0.0', debug=True, port=4999)
+    socketio.run(app, host='0.0.0.0', debug=True, port=4999)
