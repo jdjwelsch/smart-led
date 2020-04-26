@@ -4,7 +4,8 @@ from flask_cors import CORS
 import requests
 import time
 
-from sql_utils import create_devices_table, create_device_sql, set_device_status_sql, \
+from sql_utils import create_devices_table, create_device_sql, \
+    set_device_status_sql, \
     get_device_status_sql, get_device_list_sql, update_device_ip_sql
 
 
@@ -12,7 +13,8 @@ app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
 socketio = SocketIO(app, path='/ws/socket.io')
 db_file = 'db/devices.db'
-# last time point at which a request was send: dirty way of ensuring that not too many requests are send
+# last time point at which a request was send: dirty way of ensuring that not
+# too many requests are send
 global last_request_send
 last_request_send = 0
 
@@ -31,7 +33,8 @@ def register_device():
     """
     Register new wifi-controlled devices on start up.
 
-    New devices are expected to send a POST request with a json containing fields 'ip' and 'name'.
+    New devices are expected to send a POST request with a json containing
+    fields 'ip' and 'name'.
     :return:
     """
     device_list = get_device_list_sql(db_file)
@@ -54,7 +57,9 @@ def register_device():
                                'g': 0,
                                'b': 0})
             print('device %s registered at %s.' % (name, ip))
-            return Response("{'message': 'device created'}", status=201, mimetype='application/json')
+            return Response("{'message': 'device created'}",
+                            status=201,
+                            mimetype='application/json')
 
     if request.method == 'GET':
         return jsonify(device_list)
@@ -79,12 +84,16 @@ def device_status(name):
                 status_dict.update({color: color_value})
 
         # update server data base
-        set_device_status_sql(db_file, device_name=name, status_dict=status_dict)
+        set_device_status_sql(db_file,
+                              device_name=name,
+                              status_dict=status_dict)
 
         # send update to device
         set_device_status(name, status_dict)
 
-        return Response("{'message': 'status changed'}", status=201, mimetype='application/json')
+        return Response("{'message': 'status changed'}",
+                        status=201,
+                        mimetype='application/json')
 
 
 def set_device_status(device_name, status_dict):
@@ -115,10 +124,9 @@ def client_has_connected():
 
 
 @socketio.on('getState')
-def test_event():
-    device_list = get_device_list_sql(db_file)
-    dummy_update = [{'name': d, 'initialData': 'test'} for d in device_list]
-    emit('stateUpdate', dummy_update)
+def send_all_devices_state():
+    all_device_status = get_device_status_sql(db_file)
+    emit('stateUpdate', all_device_status)
 
 
 @app.route('/')

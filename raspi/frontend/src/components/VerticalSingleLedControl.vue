@@ -1,14 +1,21 @@
 <template>
     <div id="SingleLedControl">
-        <switches v-model="power" type-bold="true" theme="bulma" label="off / on"></switches>
+        <H2>{{name}}</H2>
+        <switches v-model="power" type-bold="true" theme="bulma"
+                  label="off / on" size="lg"></switches>
 
-        <color-picker :hue="hue" :saturation="saturation" :luminosity="luminosity" @input="onColorInput"></color-picker>
+        <color-picker :hue="hue" :saturation="saturation"
+                      :luminosity="luminosity" @input="onColorInput">
+
+        </color-picker>
 
         <label for="saturation">Saturation: {{saturation}}</label>
-        <input id='saturation' type="range" min="0" max="100" v-model="saturation">
+        <input id='saturation' type="range" min="0" max="100"
+               v-model="saturation">
 
         <label for="luminosity">Luminosity: {{luminosity}}</label>
-        <input id='luminosity' type="range" min="0" max="100" v-model="luminosity">
+        <input id='luminosity' type="range" min="0" max="100"
+               v-model="luminosity">
 
 
     </div>
@@ -35,7 +42,10 @@
                 saturation: 100,
                 luminosity: 50,
 
-                device_path: 'http://' + this.ServerIp + ':4999/devices/' + this.name,
+                device_path: 'http://' +
+                    this.ServerIp +
+                    ':4999/devices/' +
+                    this.name,
             }
         },
         methods:
@@ -95,13 +105,15 @@
 
         computed: {
             rgb() {
-                return convert.hsl.rgb(this.hue, this.saturation, this.luminosity)
+                return convert.hsl.rgb(
+                    this.hue,
+                    this.saturation,
+                    this.luminosity)
             }
         },
 
         created() {
-            // console.log(Chrome);
-            // console.log(this.colors);
+
         }
 
     }
@@ -112,7 +124,7 @@
     input[type=range] {
         -webkit-appearance: none;
         margin: 18px 0;
-        width: 100%;
+        width: 90%;
     }
 
     input[type=range]:focus {
@@ -120,7 +132,7 @@
     }
 
     input[type=range]::-webkit-slider-runnable-track {
-        width: 100%;
+        width: 90%;
         height: 8.4px;
         cursor: pointer;
         animate: 0.2s;
@@ -147,7 +159,7 @@
     }
 
     input[type=range]::-moz-range-track {
-        width: 100%;
+        width: 90%;
         height: 8.4px;
         cursor: pointer;
         animate: 0.2s;
@@ -168,7 +180,7 @@
     }
 
     input[type=range]::-ms-track {
-        width: 100%;
+        width: 90%;
         height: 8.4px;
         cursor: pointer;
         animate: 0.2s;
@@ -209,12 +221,6 @@
     input[type=range]:focus::-ms-fill-upper {
         background: #367ebd;
     }
-
-    button {
-        width: 50%;
-        height: 40px;
-    }
-
 
     div {
         margin: auto;

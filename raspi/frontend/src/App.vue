@@ -1,16 +1,11 @@
 <template>
     <div id="app">
-        <!-- <H2>LED Jona</H2>
-        <VerticalSingleLedControl name="led1" :server-ip="server_ip"></VerticalSingleLedControl>
-
-        <H2>LED Kueche</H2>
-        <VerticalSingleLedControl name="led2" :server-ip="server_ip"></VerticalSingleLedControl> -->
-
         <VerticalSingleLedControl
             v-for="(initialData, i) in state"
             :name="initialData.name"
+            :ref="initialData.name"
             :server-ip="server_ip"
-            :initialData="initialData.state"
+            :initialData="initialData.rgb"
             :key="i"
         />
     </div>
@@ -19,11 +14,8 @@
 <script>
 
     import 'vue-range-slider/dist/vue-range-slider.css'
-    // import SingleLedControl from "./components/SingleLedControl";
     import VerticalSingleLedControl from "./components/VerticalSingleLedControl";
 
-    // TODO: get devices from backend
-    // TODO: construct controls for each device
     // TODO: establish socket communication
 
     export default {

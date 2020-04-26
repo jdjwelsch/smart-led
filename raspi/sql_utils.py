@@ -21,7 +21,9 @@ def create_devices_table(db_path):
     """
     Creates a SQL table in which device properties are stored.
 
-    Table is created in database found at db_path. If the table already exists, nothing happens.
+    Table is created in database found at db_path. If the table already exists,
+    nothing happens.
+
     :param db_path: string, path to .db file
     """
     conn = None
@@ -54,7 +56,8 @@ def create_device_sql(db_path, device_dict):
     Create row for new device in devices table.
 
     :param db_path: string, path to .db file
-    :param device_dict: dictionary containing keys 'name', 'ip', 'r', 'g', 'b' for new device
+    :param device_dict: dictionary containing keys 'name', 'ip', 'r', 'g', 'b'
+    for new device
     """
     conn = None
     try:
@@ -88,7 +91,8 @@ def update_device_ip_sql(db_path, device_name, ip):
     Update the ip adress of an already existing device.
 
     :param db_path: string, path to .db file
-    :param device_name: string, name of the device whose IP address will be updated
+    :param device_name: string, name of the device whose IP address will be
+    updated
     :param ip: string, new ip address
     """
     conn = None
@@ -147,30 +151,50 @@ def set_device_status_sql(db_path, device_name, status_dict):
             conn.close()
 
 
-def get_device_status_sql(db_path, device_name):
+def get_device_status_sql(db_path, device_name=None):
     """
     Get properties of a device.
 
     :param db_path: string, path to .db file
-    :param device_name: string, name of device
-    :return: dict, containing keys 'ip', 'r', 'g', 'b' for device with device_name
+    :param device_name: string, name of device, if None return list of status
+    dictionaries for all registered devices
+    :return: dict, containing keys 'ip', 'r', 'g', 'b' for device with
+    device_name
     """
     conn = None
     try:
         conn = _create_db_connection(db_path)
 
         with conn:
-            sql = "SELECT * FROM devices WHERE name = ?"
-            cursor = conn.cursor()
-            cursor.execute(sql, (device_name,))
-            status = cursor.fetchall()
-            return_dict = {
-                'ip': status[0][1],
-                'r': status[0][2],
-                'g': status[0][3],
-                'b': status[0][4],
-            }
-        return return_dict
+            if device_name is not None:
+                sql = "SELECT * FROM devices WHERE name = ?"
+                cursor = conn.cursor()
+                cursor.execute(sql, (device_name,))
+                status = cursor.fetchall()
+                return_dict = {
+                    'name': status[0][0],
+                    'ip': status[0][1],
+                    'r': status[0][2],
+                    'g': status[0][3],
+                    'b': status[0][4],
+                }
+                return return_dict
+            else:
+                sql = "SELECT * FROM devices"
+                cursor = conn.cursor()
+                cursor.execute(sql)
+                status = cursor.fetchall()
+                status_list = []
+                for i in range(len(status)):
+                    return_dict = {
+                        'name': status[i][0],
+                        'ip': status[i][1],
+                        'rgb': (status[i][2],
+                                status[i][3],
+                                status[i][4]),
+                    }
+                    status_list.append(return_dict)
+                return status_list
 
     except sqlite3.Error as e:
         print(e)
