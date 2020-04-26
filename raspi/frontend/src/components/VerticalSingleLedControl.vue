@@ -16,8 +16,7 @@
         <label for="luminosity">Luminosity: {{luminosity}}</label>
         <input id='luminosity' type="range" min="0" max="100"
                v-model="luminosity">
-
-
+        <hr>
     </div>
 </template>
 
@@ -33,15 +32,14 @@
             'switches': Switches,
             ColorPicker
         },
-        props: ['name', 'ServerIp', 'initialData'],
+        props: ['name', 'ServerIp', 'rgb'],
 
         data: function () {
             return {
                 power: false,
-                hue: 25,
+                hue: 100,
                 saturation: 100,
                 luminosity: 50,
-
                 device_path: 'http://' +
                     this.ServerIp +
                     ':4999/devices/' +
@@ -54,17 +52,10 @@
                     const rgb_off = {'r': 0, 'g': 0, 'b': 0};
 
                     if (state) {
-                        axios.put(this.device_path, {
-                            'r': this.rgb[0],
-                            'g': this.rgb[1],
-                            'b': this.rgb[2],
-                        });
+                        const rgb_dict = this.calc_rgb_dict()
+                        axios.put(this.device_path, rgb_dict);
                         console.log(this.device_path);
-                        console.log({
-                            'r': this.rgb[0],
-                            'g': this.rgb[1],
-                            'b': this.rgb[2],
-                        });
+                        console.log(rgb_dict);
                     }
 
                     if (!state) {
@@ -73,49 +64,67 @@
                 }
                 ,
 
-                set_color() {
-                    const rgb = {
-                        'r': this.rgb[0],
-                        'g': this.rgb[1],
-                        'b': this.rgb[2],
-                    };
-                    axios.put(this.device_path, rgb);
+                set_device_color() {
+                    axios.put(this.device_path, this.calc_rgb_dict());
 
+                },
+
+                calc_rgb_dict() {
+                    let rgb_vals = convert.hsl.rgb(
+                        this.hue,
+                        this.saturation,
+                        this.luminosity)
+                    return {
+                        'r': rgb_vals[0],
+                        'g': rgb_vals[1],
+                        'b': rgb_vals[2],
+                    }
+                },
+
+                set_hsl_values_from_rgb() {
+                    this.hue = convert.rgb.hsl(this.rgb)[0];
+                    this.saturation = convert.rgb.hsl(this.rgb)[1];
+                    this.luminosity = convert.rgb.hsl(this.rgb)[2];
                 },
 
                 onColorInput(hue) {
                     this.hue = hue;
-                    console.log('hue (radial): ', hue);
                 },
-
             },
-
         watch: {
             power() {
                 this.switch_led(this.power)
+            }
+            ,
+            // update internal hsl values when rgb is changed
+            // (i. e. by broadcast)
+            rgb() {
+                this.set_hsl_values_from_rgb()
+                this.set_device_color();
+            }
+            ,
+            // send set_color request when values are changed
+            luminosity() {
+                this.power = this.luminosity > 0;
+                this.set_device_color();
             },
-
-            rgb() {
-                this.set_color();
-                if (this.luminosity > 0) {
-                    this.power = true;
-                }
+            hue() {
+                this.power = this.luminosity > 0;
+                this.set_device_color();
+            },
+            saturation() {
+                this.power = this.luminosity > 0;
+                this.set_device_color();
             }
-        },
+        }
+        ,
 
-        computed: {
-            rgb() {
-                return convert.hsl.rgb(
-                    this.hue,
-                    this.saturation,
-                    this.luminosity)
-            }
-        },
+        computed: {}
+        ,
 
         created() {
-
+            this.set_hsl_values_from_rgb()
         }
-
     }
 </script>
 <style scoped>
@@ -224,5 +233,6 @@
 
     div {
         margin: auto;
+        margin-bottom: 1cm;
     }
 </style>

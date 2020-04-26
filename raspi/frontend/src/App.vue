@@ -5,7 +5,7 @@
             :name="initialData.name"
             :ref="initialData.name"
             :server-ip="server_ip"
-            :initialData="initialData.rgb"
+            :rgb="initialData.rgb"
             :key="i"
         />
     </div>

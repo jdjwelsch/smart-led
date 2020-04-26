@@ -113,7 +113,11 @@ def set_device_status(device_name, status_dict):
         url = 'http://' + ip + ':80/leds'
         print('send to %s' % url)
         requests.put(url, json=status_dict)
-        # TODO: broadcast new status to all connected clients
+        
+        # broadcast new status to all connected clients
+        all_device_status = get_device_status_sql(db_file)
+        socketio.emit('stateUpdate', all_device_status, broadcast=True)
+
     else:
         print('too little time has passed')
 
