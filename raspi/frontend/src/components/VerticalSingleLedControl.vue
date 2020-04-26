@@ -4,9 +4,10 @@
         <switches v-model="power" type-bold="true" theme="bulma"
                   label="off / on" size="lg"></switches>
 
-        <color-picker :hue="hue" :saturation="saturation"
-                      :luminosity="luminosity" @input="onColorInput">
-
+        <color-picker :hue="hue"
+                      :saturation="saturation"
+                      :luminosity="luminosity"
+                      @input="onColorInput">
         </color-picker>
 
         <label for="saturation">Saturation: {{saturation}}</label>
@@ -48,61 +49,57 @@
         },
         methods:
             {
-                switch_led: function (state) {
-                    const rgb_off = {'r': 0, 'g': 0, 'b': 0};
+            switch_led: function (state) {
+                const rgb_off = {'rgb': [0, 0, 0]};
 
-                    if (state) {
-                        const rgb_dict = this.calc_rgb_dict()
-                        axios.put(this.device_path, rgb_dict);
-                        console.log(this.device_path);
-                        console.log(rgb_dict);
-                    }
-
-                    if (!state) {
-                        axios.put(this.device_path, rgb_off);
-                    }
+                if (state) {
+                    const rgb_dict = this.calc_rgb_dict()
+                    axios.put(this.device_path, rgb_dict);
+                    console.log(this.device_path);
+                    console.log(rgb_dict);
                 }
-                ,
 
-                set_device_color() {
-                    axios.put(this.device_path, this.calc_rgb_dict());
+                if (!state) {
+                    axios.put(this.device_path, rgb_off);
+                }
+            }
+            ,
 
-                },
+            set_device_color() {
+                axios.put(this.device_path, this.calc_rgb_dict());
+                console.log('sending', this.calc_rgb_dict())
 
-                calc_rgb_dict() {
-                    let rgb_vals = convert.hsl.rgb(
-                        this.hue,
-                        this.saturation,
-                        this.luminosity)
-                    return {
-                        'r': rgb_vals[0],
-                        'g': rgb_vals[1],
-                        'b': rgb_vals[2],
-                    }
-                },
-
-                set_hsl_values_from_rgb() {
-                    this.hue = convert.rgb.hsl(this.rgb)[0];
-                    this.saturation = convert.rgb.hsl(this.rgb)[1];
-                    this.luminosity = convert.rgb.hsl(this.rgb)[2];
-                },
-
-                onColorInput(hue) {
-                    this.hue = hue;
-                },
             },
+
+            calc_rgb_dict() {
+                let rgb_vals = convert.hsl.rgb(
+                    this.hue,
+                    this.saturation,
+                    this.luminosity)
+                return {'rgb': rgb_vals}
+            },
+
+            set_hsl_values_from_rgb() {
+                this.hue = convert.rgb.hsl(this.rgb)[0];
+                this.saturation = convert.rgb.hsl(this.rgb)[1];
+                this.luminosity = convert.rgb.hsl(this.rgb)[2];
+            },
+
+            onColorInput(hue) {
+                this.hue = hue;
+            },
+        },
         watch: {
             power() {
                 this.switch_led(this.power)
-            }
-            ,
+            },
+
             // update internal hsl values when rgb is changed
             // (i. e. by broadcast)
             rgb() {
                 this.set_hsl_values_from_rgb()
-                this.set_device_color();
-            }
-            ,
+            },
+
             // send set_color request when values are changed
             luminosity() {
                 this.power = this.luminosity > 0;
@@ -121,7 +118,6 @@
 
         computed: {}
         ,
-
         created() {
             this.set_hsl_values_from_rgb()
         }

@@ -1,8 +1,14 @@
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask, request, jsonify, Response
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import requests
+
 import time
+import queue
+import threading
 
 from sql_utils import create_devices_table, create_device_sql, \
     set_device_status_sql, \
@@ -11,12 +17,9 @@ from sql_utils import create_devices_table, create_device_sql, \
 
 app = Flask(__name__)
 CORS(app, resources={r'/*': {'origins': '*'}})
-socketio = SocketIO(app, path='/ws/socket.io')
+socket = SocketIO(app, path='/ws/socket.io')
 db_file = 'db/devices.db'
-# last time point at which a request was send: dirty way of ensuring that not
-# too many requests are send
-global last_request_send
-last_request_send = 0
+
 
 
 @app.before_first_request
@@ -53,9 +56,7 @@ def register_device():
             create_device_sql(db_file,
                               {'name': name,
                                'ip': ip,
-                               'r': 0,
-                               'g': 0,
-                               'b': 0})
+                               'rgb': (0, 0, 0)})
             print('device %s registered at %s.' % (name, ip))
             return Response("{'message': 'device created'}",
                             status=201,
@@ -63,6 +64,7 @@ def register_device():
 
     if request.method == 'GET':
         return jsonify(device_list)
+
 
 # TODO: replace with sockets?
 @app.route('/devices/<name>', methods=['GET', 'PUT'])
@@ -73,30 +75,30 @@ def device_status(name):
     :return:
     """
     if request.method == 'GET':
-        device_status = get_device_status_sql(db_file, name)
+        device_status = get_device_status_sql(db_file, name)[0]
         return jsonify(device_status)
 
     if request.method == 'PUT':
         status_dict = {}
-        for color in ['r', 'g', 'b']:
-            if color in request.json:
-                color_value = request.json[color]
-                status_dict.update({color: color_value})
+        # TODO: refactor API on esp8266 to take rgb tuple
+        for i, color in enumerate(['r', 'g', 'b']):
+            color_value = request.json['rgb'][i]
+            status_dict.update({color: color_value})
 
         # update server data base
         set_device_status_sql(db_file,
                               device_name=name,
-                              status_dict=status_dict)
+                              status_dict={'rgb': request.json['rgb']})
 
         # send update to device
-        set_device_status(name, status_dict)
+        # set_device_status(name)
 
         return Response("{'message': 'status changed'}",
                         status=201,
                         mimetype='application/json')
 
 
-def set_device_status(device_name, status_dict):
+def set_device_status(device_name=None):
     """
     Set state of a wifi controlled device.
 
@@ -104,40 +106,51 @@ def set_device_status(device_name, status_dict):
     :param status_dict: dictionary containing key-value pairs to be set
     :return:
     """
-    global last_request_send
-    current_time = time.time()
-    if (current_time - last_request_send) > 0.1:
-        last_request_send = current_time
+    while True:
+        # set all devices if not specified
+        devices = [device_name] or get_device_list_sql
         device_info = get_device_status_sql(db_file, device_name)
-        ip = device_info['ip']
-        url = 'http://' + ip + ':80/leds'
-        print('send to %s' % url)
-        requests.put(url, json=status_dict)
-        
+
+        # send requests to LED strips
+        for i, d in enumerate(devices):
+            ip = device_info[i]['ip']
+            url = 'http://' + ip + ':80/leds'
+            print('send to %s' % url)
+
+            status_dict = {}
+            for j, color in enumerate(['r', 'g', 'b']):
+                status_dict.update({color: device_info[i]['rgb'][j]})
+
+            requests.put(url, json=status_dict)
+
+        # TODO: send only if something really changed
         # broadcast new status to all connected clients
         all_device_status = get_device_status_sql(db_file)
-        socketio.emit('stateUpdate', all_device_status, broadcast=True)
+        socket.emit('stateUpdate', all_device_status, broadcast=True)
+        eventlet.sleep(0.5)
 
-    else:
-        print('too little time has passed')
+# start thread for led stripe setting
+eventlet.spawn(set_device_status)
 
 
-@socketio.on('connect')
+@socket.on('connect')
 def client_has_connected():
     print("A client has connected")
 
 
-@socketio.on('getState')
+@socket.on('getState')
 def send_all_devices_state():
     all_device_status = get_device_status_sql(db_file)
     emit('stateUpdate', all_device_status)
 
 
+# TODO: serve frontend application here
 @app.route('/')
 def welcome():
-    return 'Welcome to LED control backend'
+    return app.send_static_file('frontend/dist/index.html')
+    # return 'Welcome to LED control backend'
 
 
 if __name__ == '__main__':
     # app.run(host='0.0.0.0', debug=True, port=4999)
-    socketio.run(app, host='0.0.0.0', debug=True, port=4999)
+    socket.run(app, host='0.0.0.0', debug=True, port=4999)

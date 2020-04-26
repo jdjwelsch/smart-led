@@ -68,9 +68,9 @@ def create_device_sql(db_path, device_dict):
             # write new device to db table
             device_values = (device_dict['name'],
                              device_dict['ip'],
-                             device_dict['r'],
-                             device_dict['g'],
-                             device_dict['b'])
+                             device_dict['rgb'][0],
+                             device_dict['rgb'][1],
+                             device_dict['rgb'][2])
 
             sql = """ INSERT INTO devices(name, ip, r, g, b)
                      VALUES(?, ?, ?, ?, ?);
@@ -121,16 +121,16 @@ def set_device_status_sql(db_path, device_name, status_dict):
 
     :param db_path: string, path to .db file
     :param device_name: string, name of device
-    :param status_dict: dict, containing keys 'r', 'g', 'b'
+    :param status_dict: dict, containing key 'rgb'
     """
     conn = None
     try:
         conn = _create_db_connection(db_path)
 
         with conn:
-            new_values = (status_dict['r'],
-                          status_dict['g'],
-                          status_dict['b'],
+            new_values = (status_dict['rgb'][0],
+                          status_dict['rgb'][1],
+                          status_dict['rgb'][2],
                           device_name)
 
             sql = """ UPDATE devices
@@ -158,7 +158,7 @@ def get_device_status_sql(db_path, device_name=None):
     :param db_path: string, path to .db file
     :param device_name: string, name of device, if None return list of status
     dictionaries for all registered devices
-    :return: dict, containing keys 'ip', 'r', 'g', 'b' for device with
+    :return: list of dicts, containing keys 'ip', 'rgb' for device with
     device_name
     """
     conn = None
@@ -170,31 +170,24 @@ def get_device_status_sql(db_path, device_name=None):
                 sql = "SELECT * FROM devices WHERE name = ?"
                 cursor = conn.cursor()
                 cursor.execute(sql, (device_name,))
-                status = cursor.fetchall()
-                return_dict = {
-                    'name': status[0][0],
-                    'ip': status[0][1],
-                    'r': status[0][2],
-                    'g': status[0][3],
-                    'b': status[0][4],
-                }
-                return return_dict
+
             else:
                 sql = "SELECT * FROM devices"
                 cursor = conn.cursor()
                 cursor.execute(sql)
-                status = cursor.fetchall()
-                status_list = []
-                for i in range(len(status)):
-                    return_dict = {
-                        'name': status[i][0],
-                        'ip': status[i][1],
-                        'rgb': (status[i][2],
-                                status[i][3],
-                                status[i][4]),
-                    }
-                    status_list.append(return_dict)
-                return status_list
+
+            status = cursor.fetchall()
+            status_list = []
+            for i in range(len(status)):
+                return_dict = {
+                    'name': status[i][0],
+                    'ip': status[i][1],
+                    'rgb': (status[i][2],
+                            status[i][3],
+                            status[i][4])
+                }
+                status_list.append(return_dict)
+            return status_list
 
     except sqlite3.Error as e:
         print(e)
