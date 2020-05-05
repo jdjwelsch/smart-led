@@ -8,13 +8,13 @@
                       :saturation="saturation"
                       :luminosity="luminosity"
                       @input="onColorInput">
-        </color-picker>
+        </color-picker><br>
 
-        <label for="saturation">Saturation: {{saturation}}</label>
+        <label for="saturation">Saturation: {{saturation}}</label><br>
         <input id='saturation' type="range" min="0" max="100"
-               v-model="saturation">
+               v-model="saturation"><br>
 
-        <label for="luminosity">Luminosity: {{luminosity}}</label>
+        <label for="luminosity">Luminosity: {{luminosity}}</label><br>
         <input id='luminosity' type="range" min="0" max="100"
                v-model="luminosity">
         <hr>
@@ -45,6 +45,7 @@
                     this.ServerIp +
                     ':4999/devices/' +
                     this.name,
+                last_request_send: Date.now()
             }
         },
         methods:
@@ -66,11 +67,14 @@
             ,
 
             set_device_color() {
-                axios.put(this.device_path, this.calc_rgb_dict());
-                console.log('sending', this.calc_rgb_dict())
-
+                let now = Date.now();
+                // only send if there has not been an update in the last 500 ms
+                if (now - this.last_request_send > 500) {
+                        axios.put(this.device_path, this.calc_rgb_dict());
+                        console.log('sending', this.calc_rgb_dict());
+                        this.last_request_send = now;
+                }
             },
-
             calc_rgb_dict() {
                 let rgb_vals = convert.hsl.rgb(
                     this.hue,
@@ -100,7 +104,8 @@
                 this.set_hsl_values_from_rgb()
             },
 
-            // send set_color request when values are changed
+            // send set_color request when hsl values are changed
+
             luminosity() {
                 this.power = this.luminosity > 0;
                 this.set_device_color();
@@ -137,7 +142,7 @@
     }
 
     input[type=range]::-webkit-slider-runnable-track {
-        width: 90%;
+        width: 96%;
         height: 8.4px;
         cursor: pointer;
         animate: 0.2s;
@@ -164,7 +169,7 @@
     }
 
     input[type=range]::-moz-range-track {
-        width: 90%;
+        width: 96%;
         height: 8.4px;
         cursor: pointer;
         animate: 0.2s;
@@ -185,7 +190,7 @@
     }
 
     input[type=range]::-ms-track {
-        width: 90%;
+        width: 100%;
         height: 8.4px;
         cursor: pointer;
         animate: 0.2s;
