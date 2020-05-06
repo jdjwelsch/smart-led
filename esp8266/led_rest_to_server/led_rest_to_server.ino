@@ -43,7 +43,7 @@ struct Led {
 
 const char* wifi_ssid = "SSID";
 const char* wifi_passwd = "PWD";
-const char* device_name = "Wohnzimmer";
+const char* device_name = "XX";
 
 // potentially IP can be set here as well with IPadress addr
 ESP8266WebServer http_rest_server(HTTP_REST_PORT);
@@ -51,9 +51,9 @@ ESP8266WebServer http_rest_server(HTTP_REST_PORT);
 void init_led_ressource()
 {
     // start with white, half brightness
-    led_ressource.r = 127;
-    led_ressource.g = 127;
-    led_ressource.b = 127;
+    led_ressource.r = 0;
+    led_ressource.g = 0;
+    led_ressource.b = 0;
     led_ressource.power = true;
 }
 
@@ -91,25 +91,58 @@ void json_to_resource(JsonDocument& jsonBody) {
     Serial.println(g);
     Serial.println(b);
     Serial.println(power);
-    
-    // set values in led object
-    led_ressource.r = r;
-    led_ressource.g = g;
-    led_ressource.b = g;
-    led_ressource.power = power;
+
 
     // apply values to led strip
     if (led_ressource.power) {
       // set colors
-      strip.fill(strip.Color(r, g, b));
+      smooth_transition(r, g, b);
     }
     else {
       // set all colors to 0 if power off
       strip.fill(strip.Color(0, 0, 0));
     }
     strip.show();
-    
+
+    // set values in led object
+    led_ressource.r = r;
+    led_ressource.g = g;
+    led_ressource.b = g;
+    led_ressource.power = power;    
 }
+
+void smooth_transition(int r, int g, int b) {
+  // do a smooth transition between current color and new rgb values
+
+  int n_steps = 30;  // number of color steps used in transition
+  float transition_time = 0.7; // time in seconds which the whole transition should take 
+
+  // steps for the single colors
+  int r_step = (int) (r - led_ressource.r) / n_steps;
+  int g_step = (int) (g - led_ressource.g) / n_steps;
+  int b_step = (int) (b - led_ressource.b) / n_steps;
+
+  int current_r = led_ressource.r;
+  int current_g = led_ressource.g;
+  int current_b = led_ressource.b;
+
+  for (int i=0; i < n_steps; i++){
+      current_r += r_step;
+      current_g += g_step;
+      current_b += b_step;
+      
+      strip.fill(strip.Color(current_r, current_g, current_b));
+      strip.show();
+      
+      // delay expects time in ms
+      delay( (transition_time / n_steps) * 1000 );
+  }
+  
+  // ensure that color ends up at target value (could be different due to rounding errors)
+  strip.fill(strip.Color(r, g, b));
+  strip.show();
+}
+
 
 void get_leds() {
     StaticJsonDocument<128> jsonObj;
@@ -145,9 +178,9 @@ void post_put_leds() {
             http_rest_server.send(409);
         }
         else if (http_rest_server.method() == HTTP_PUT) {
-            json_to_resource(jsonObj);
             http_rest_server.sendHeader("Location", "/leds/");
             http_rest_server.send(200);
+            json_to_resource(jsonObj);
         }
         else {
             http_rest_server.send(404);
@@ -170,7 +203,7 @@ void setup(void) {
     Serial.begin(115200);
 
     strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
-    strip.show();            // Turn OFF all pixels ASAP
+    strip.show();            // Turn off all pixels
     strip.setBrightness(max_brightness); // set maximum overall brightness
     
     init_led_ressource();
