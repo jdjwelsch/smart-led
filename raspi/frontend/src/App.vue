@@ -6,6 +6,7 @@
             :ref="initialData.name"
             :server-ip="server_ip"
             :rgb="initialData.rgb"
+            :power="initialData.power"
             :key="i"
         />
     </div>
@@ -16,7 +17,6 @@
     import 'vue-range-slider/dist/vue-range-slider.css'
     import VerticalSingleLedControl from "./components/VerticalSingleLedControl";
 
-    // TODO: establish socket communication
 
     export default {
         name: 'App',

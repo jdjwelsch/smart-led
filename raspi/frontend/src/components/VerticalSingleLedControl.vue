@@ -33,11 +33,10 @@
             'switches': Switches,
             ColorPicker
         },
-        props: ['name', 'ServerIp', 'rgb'],
+        props: ['name', 'ServerIp', 'rgb', 'power'],
 
         data: function () {
             return {
-                power: false,
                 hue: 100,
                 saturation: 100,
                 luminosity: 50,
@@ -50,37 +49,27 @@
         },
         methods:
             {
-            switch_led: function (state) {
-                const rgb_off = {'rgb': [0, 0, 0]};
-
-                if (state) {
-                    const rgb_dict = this.calc_rgb_dict()
-                    axios.put(this.device_path, rgb_dict);
-                    console.log(this.device_path);
-                    console.log(rgb_dict);
-                }
-
-                if (!state) {
-                    axios.put(this.device_path, rgb_off);
-                }
+            switch_led: function () {
+                axios.put(this.device_path, this.calc_state_dict());
+                console.log('sending', this.calc_state_dict());
             }
             ,
 
             set_device_color() {
                 let now = Date.now();
                 // only send if there has not been an update in the last 500 ms
-                if (now - this.last_request_send > 500) {
-                        axios.put(this.device_path, this.calc_rgb_dict());
-                        console.log('sending', this.calc_rgb_dict());
+                if (now - this.last_request_send > 100) {
+                        axios.put(this.device_path, this.calc_state_dict());
+                        console.log('sending', this.calc_state_dict());
                         this.last_request_send = now;
                 }
             },
-            calc_rgb_dict() {
+            calc_state_dict() {
                 let rgb_vals = convert.hsl.rgb(
                     this.hue,
                     this.saturation,
                     this.luminosity)
-                return {'rgb': rgb_vals}
+                return {'rgb': rgb_vals, 'power': this.power}
             },
 
             set_hsl_values_from_rgb() {
@@ -95,7 +84,7 @@
         },
         watch: {
             power() {
-                this.switch_led(this.power)
+                this.switch_led()
             },
 
             // update internal hsl values when rgb is changed
