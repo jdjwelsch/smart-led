@@ -15,36 +15,35 @@
 // number of LEDs in strip
 #define LED_COUNT 60
 
-
-// define maximum brightness (max is 255)- watch out for power consumption
-const int max_brightness = 100;
-
-// LED strip object
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-// Argument 3 = Pixel type flags, add together as needed:
-//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
-//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
-//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
-//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-//   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
-
-
 /*
+USAGE:
 set LED color and brightness with:
 curl -i -X PUT -d'{"r":red_value, "g":green_value, "b":blue_value}' http://IP/leds
  */
+
+
+/*
+define maximum brightness (max is 255)- watch out for power consumption
+with my setup max_brightness = 110 is equivalent to maximum current of 1 A
+@max_brightness = 255: max current ca 1.75 A
+*/
+const int max_brightness = 110;
+
+// LED strip object
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 
 struct Led {
     byte r;
     byte g;
     byte b;
+    bool power;
     
 } led_ressource;
 
 const char* wifi_ssid = "SSID";
-const char* wifi_passwd = "PASSWD";
-const char* device_name = "LED";
+const char* wifi_passwd = "PWD";
+const char* device_name = "Wohnzimmer";
 
 // potentially IP can be set here as well with IPadress addr
 ESP8266WebServer http_rest_server(HTTP_REST_PORT);
@@ -55,8 +54,10 @@ void init_led_ressource()
     led_ressource.r = 127;
     led_ressource.g = 127;
     led_ressource.b = 127;
+    led_ressource.power = true;
 }
 
+// log into wifi
 int init_wifi() {
     int retries = 0;
 
@@ -70,34 +71,43 @@ int init_wifi() {
         delay(WIFI_RETRY_DELAY);
         Serial.print("#");
     }
-
-
-    // TODO: send ip address to raspi
     
     return WiFi.status(); // return the WiFi connection status
 }
 
+// extract information from json and set variables
 void json_to_resource(JsonDocument& jsonBody) {
-    int r, g, b, brightness;
+    int r, g, b;
+    bool power;
 
     // get values from json
     r = jsonBody["r"];
     g = jsonBody["g"];
     b = jsonBody["b"];
+    power = jsonBody["power"];
 
     // print values for debugging
     Serial.println(r);
     Serial.println(g);
     Serial.println(b);
+    Serial.println(power);
     
     // set values in led object
     led_ressource.r = r;
     led_ressource.g = g;
     led_ressource.b = g;
+    led_ressource.power = power;
 
     // apply values to led strip
-    strip.fill(strip.Color(r, g, b));
-    strip.show();                                          //  update strip
+    if (led_ressource.power) {
+      // set colors
+      strip.fill(strip.Color(r, g, b));
+    }
+    else {
+      // set all colors to 0 if power off
+      strip.fill(strip.Color(0, 0, 0));
+    }
+    strip.show();
     
 }
 
@@ -108,6 +118,7 @@ void get_leds() {
     jsonObj["r"] = led_ressource.r;
     jsonObj["g"] = led_ressource.g;
     jsonObj["b"] = led_ressource.b;
+    jsonObj["power"] = led_ressource.power;
     serializeJsonPretty(jsonObj, serialized);
     
     http_rest_server.send(200, "application/json", serialized);
@@ -155,10 +166,8 @@ void config_rest_server_routing() {
 }
 
 void setup(void) {
-    // NodeMCU needs bitrate 9600 for serial monitor
-    // Serial.begin(9600);
+    // set bitrate for ESP8266 (experiment with different values if you get weird serial output)
     Serial.begin(115200);
-    //Serial.begin(74880);
 
     strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
     strip.show();            // Turn OFF all pixels ASAP
@@ -173,7 +182,7 @@ void setup(void) {
 
         // send own ip and device_name to control server
         HTTPClient http;
-        http.begin("http://192.168.0.78:5000/devices");
+        http.begin("http://192.168.0.9:4999/devices");
         http.addHeader("Content-Type", "application/json");
         Serial.println("Send registration to server");
         
@@ -185,6 +194,8 @@ void setup(void) {
 
         int httpCode = http.POST(serialized_registration);
         Serial.println(httpCode);
+
+        http.end();
         
     }
     else {
