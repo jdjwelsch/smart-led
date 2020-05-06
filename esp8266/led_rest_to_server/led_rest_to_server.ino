@@ -43,7 +43,7 @@ struct Led {
 
 const char* wifi_ssid = "SSID";
 const char* wifi_passwd = "PWD";
-const char* device_name = "XX";
+const char* device_name = "LED Kueche";
 
 // potentially IP can be set here as well with IPadress addr
 ESP8266WebServer http_rest_server(HTTP_REST_PORT);
@@ -92,22 +92,28 @@ void json_to_resource(JsonDocument& jsonBody) {
     Serial.println(b);
     Serial.println(power);
 
-
+    
     // apply values to led strip
-    if (led_ressource.power) {
-      // set colors
-      smooth_transition(r, g, b);
+    if (power) {
+      // set colors (only if values have changed)
+      if (r != led_ressource.r || 
+          g != led_ressource.g || 
+          b != led_ressource.b || 
+          power != led_ressource.power) {
+            
+            smooth_transition(r, g, b);
+      }
     }
     else {
       // set all colors to 0 if power off
       strip.fill(strip.Color(0, 0, 0));
+      strip.show();
     }
-    strip.show();
-
+    
     // set values in led object
     led_ressource.r = r;
     led_ressource.g = g;
-    led_ressource.b = g;
+    led_ressource.b = b;
     led_ressource.power = power;    
 }
 
@@ -115,12 +121,12 @@ void smooth_transition(int r, int g, int b) {
   // do a smooth transition between current color and new rgb values
 
   int n_steps = 30;  // number of color steps used in transition
-  float transition_time = 0.7; // time in seconds which the whole transition should take 
+  float transition_time = 1; // time in seconds which the whole transition should take 
 
   // steps for the single colors
-  int r_step = (int) (r - led_ressource.r) / n_steps;
-  int g_step = (int) (g - led_ressource.g) / n_steps;
-  int b_step = (int) (b - led_ressource.b) / n_steps;
+  int r_step = (int) ((r - led_ressource.r) / n_steps);
+  int g_step = (int) ((g - led_ressource.g) / n_steps);
+  int b_step = (int) ((b - led_ressource.b) / n_steps);
 
   int current_r = led_ressource.r;
   int current_g = led_ressource.g;
@@ -130,6 +136,11 @@ void smooth_transition(int r, int g, int b) {
       current_r += r_step;
       current_g += g_step;
       current_b += b_step;
+
+      // print current colors to serial for debugging
+      Serial.println(current_r);
+      Serial.println(current_g);
+      Serial.println(current_b);
       
       strip.fill(strip.Color(current_r, current_g, current_b));
       strip.show();
@@ -215,7 +226,7 @@ void setup(void) {
 
         // send own ip and device_name to control server
         HTTPClient http;
-        http.begin("http://192.168.0.9:4999/devices");
+        http.begin("http://192.168.0.78:4999/devices");
         http.addHeader("Content-Type", "application/json");
         Serial.println("Send registration to server");
         
