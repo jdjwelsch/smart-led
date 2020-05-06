@@ -1,21 +1,17 @@
 import eventlet
 eventlet.monkey_patch()
 
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, render_template, send_from_directory
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import requests
-
-import time
-import queue
-import threading
 
 from sql_utils import create_devices_table, create_device_sql, \
     set_device_status_sql, \
     get_device_status_sql, get_device_list_sql, update_device_ip_sql
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend/dist/')
 CORS(app, resources={r'/*': {'origins': '*'}})
 socket = SocketIO(app, path='/ws/socket.io')
 db_file = 'db/devices.db'
@@ -108,7 +104,10 @@ def set_device_status(device_name=None):
     """
     while True:
         # set all devices if not specified
-        devices = [device_name] or get_device_list_sql
+        if device_name is None:
+            devices = get_device_list_sql(db_file)
+        else:
+            devices = [device_name]
         device_info = get_device_status_sql(db_file, device_name)
 
         # send requests to LED strips
@@ -121,7 +120,10 @@ def set_device_status(device_name=None):
             for j, color in enumerate(['r', 'g', 'b']):
                 status_dict.update({color: device_info[i]['rgb'][j]})
 
-            requests.put(url, json=status_dict)
+            try:
+                requests.put(url, json=status_dict)
+            except requests.exceptions.ConnectionError:
+                print('could not reach ' + url)
 
         # TODO: send only if something really changed
         # broadcast new status to all connected clients
@@ -144,10 +146,10 @@ def send_all_devices_state():
     emit('stateUpdate', all_device_status)
 
 
-# TODO: serve frontend application here
 @app.route('/')
 def welcome():
-    return app.send_static_file('frontend/dist/index.html')
+    # serve frontend application
+    return send_from_directory('frontend/dist', 'index.html')
     # return 'Welcome to LED control backend'
 
 
