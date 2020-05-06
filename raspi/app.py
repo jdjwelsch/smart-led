@@ -63,7 +63,8 @@ def register_device():
             create_device_sql(db_file,
                               {'name': name,
                                'ip': ip,
-                               'rgb': (0, 0, 0)})
+                               'rgb': (0, 0, 0),
+                               'power': False})
             print('device %s registered at %s.' % (name, ip))
             return Response("{'message': 'device created'}",
                             status=201,
@@ -85,16 +86,11 @@ def device_status(name):
         return jsonify(device_status)
 
     if request.method == 'PUT':
-        status_dict = {}
-        # TODO: refactor API on esp8266 to take rgb tuple
-        for i, color in enumerate(['r', 'g', 'b']):
-            color_value = request.json['rgb'][i]
-            status_dict.update({color: color_value})
-
         # update server data base
         set_device_status_sql(db_file,
                               device_name=name,
-                              status_dict={'rgb': request.json['rgb']})
+                              status_dict={'rgb': request.json['rgb'],
+                                           'power': request.json['power']})
 
         return Response("{'message': 'status changed'}",
                         status=201,
@@ -132,16 +128,24 @@ def set_device_status(device_name=None):
         devices = [device_name]
     device_info = get_device_status_sql(db_file, device_name)
 
+    # stop if there are no registered devices
+    if devices is None:
+        print('No devices registered yet')
+        return None
+
     # send requests to LED strips
     for i, d in enumerate(devices):
         ip = device_info[i]['ip']
         url = 'http://' + ip + ':80/leds'
         print('send to %s' % url)
 
+        # create dictionary to send to LED
         status_dict = {}
         for j, color in enumerate(['r', 'g', 'b']):
             status_dict.update({color: device_info[i]['rgb'][j]})
+        status_dict.update({'power': device_info[i]['power']})
 
+        # send request to LED
         try:
             http.put(url, json=status_dict)
         except requests.exceptions.ConnectionError:

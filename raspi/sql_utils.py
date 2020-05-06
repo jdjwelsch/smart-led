@@ -37,7 +37,8 @@ def create_devices_table(db_path):
                                ip text,
                                r integer,
                                g integer,
-                               b integer);
+                               b integer,
+                               power integer);
                            """
 
         # set up table
@@ -56,8 +57,8 @@ def create_device_sql(db_path, device_dict):
     Create row for new device in devices table.
 
     :param db_path: string, path to .db file
-    :param device_dict: dictionary containing keys 'name', 'ip', 'r', 'g', 'b'
-    for new device
+    :param device_dict: dictionary containing keys 'name', 'ip', 'r', 'g', 'b',
+    'power' for new device
     """
     conn = None
     try:
@@ -70,10 +71,11 @@ def create_device_sql(db_path, device_dict):
                              device_dict['ip'],
                              device_dict['rgb'][0],
                              device_dict['rgb'][1],
-                             device_dict['rgb'][2])
+                             device_dict['rgb'][2],
+                             device_dict['power'])
 
-            sql = """ INSERT INTO devices(name, ip, r, g, b)
-                     VALUES(?, ?, ?, ?, ?);
+            sql = """ INSERT INTO devices(name, ip, r, g, b, power)
+                     VALUES(?, ?, ?, ?, ?, ?);
                   """
             cursor = conn.cursor()
             cursor.execute(sql, device_values)
@@ -121,7 +123,7 @@ def set_device_status_sql(db_path, device_name, status_dict):
 
     :param db_path: string, path to .db file
     :param device_name: string, name of device
-    :param status_dict: dict, containing key 'rgb'
+    :param status_dict: dict, containing keys 'rgb' and 'power'
     """
     conn = None
     try:
@@ -131,12 +133,14 @@ def set_device_status_sql(db_path, device_name, status_dict):
             new_values = (status_dict['rgb'][0],
                           status_dict['rgb'][1],
                           status_dict['rgb'][2],
+                          status_dict['power'],
                           device_name)
 
             sql = """ UPDATE devices
                       SET r = ?,
                           g = ?,
-                          b = ?
+                          b = ?,
+                          power = ?
                       WHERE name = ?"""
 
             cursor = conn.cursor()
@@ -158,8 +162,8 @@ def get_device_status_sql(db_path, device_name=None):
     :param db_path: string, path to .db file
     :param device_name: string, name of device, if None return list of status
     dictionaries for all registered devices
-    :return: list of dicts, containing keys 'ip', 'rgb' for device with
-    device_name
+    :return: list of dicts, containing keys 'ip', 'rgb', and 'power' for device
+    with device_name
     """
     conn = None
     try:
@@ -184,7 +188,8 @@ def get_device_status_sql(db_path, device_name=None):
                     'ip': status[i][1],
                     'rgb': (status[i][2],
                             status[i][3],
-                            status[i][4])
+                            status[i][4]),
+                    'power': status[i][5]
                 }
                 status_list.append(return_dict)
             return status_list
