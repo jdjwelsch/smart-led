@@ -8,7 +8,8 @@
                       :saturation="saturation"
                       :luminosity="luminosity"
                       @input="onColorInput">
-        </color-picker><br>
+        </color-picker>
+        <br>
 
         <label for="saturation">Saturation: {{saturation}}</label><br>
         <input id='saturation' type="range" min="0" max="100"
@@ -49,76 +50,73 @@
         },
         methods:
             {
-            switch_led: function () {
-                axios.put(this.device_path, this.calc_state_dict());
-                console.log('sending', this.calc_state_dict());
-            }
-            ,
+                switch_led: function () {
+                    axios.put(this.device_path, this.calc_state_dict());
+                    console.log('sending', this.calc_state_dict());
+                }
+                ,
 
-            set_device_color() {
-                let now = Date.now();
-                // only send if there has not been an update in the last 500 ms
-                if (now - this.last_request_send > 100) {
+                set_device_color() {
+                    let now = Date.now();
+                    // only send if there has not been an update in last 100 ms
+                    if (now - this.last_request_send > 100) {
                         axios.put(this.device_path, this.calc_state_dict());
                         console.log('sending', this.calc_state_dict());
                         this.last_request_send = now;
-                }
-            },
-            calc_state_dict() {
-                let rgb_vals = convert.hsl.rgb(
-                    this.hue,
-                    this.saturation,
-                    this.luminosity)
-                return {'rgb': rgb_vals, 'power': this.power}
+                    }
+                },
+                // calculate rgb state dict for sending to backend
+                calc_state_dict() {
+                    let rgb_vals = convert.hsl.rgb(
+                        this.hue,
+                        this.saturation,
+                        this.luminosity)
+                    return {'rgb': rgb_vals, 'power': this.power}
+                },
+
+                set_hsl_values_from_rgb() {
+                    this.hue = convert.rgb.hsl(this.rgb)[0];
+                    this.saturation = convert.rgb.hsl(this.rgb)[1];
+                    this.luminosity = convert.rgb.hsl(this.rgb)[2];
+                },
+
+                onColorInput(hue) {
+                    this.hue = hue;
+                },
             },
 
-            set_hsl_values_from_rgb() {
-                this.hue = convert.rgb.hsl(this.rgb)[0];
-                this.saturation = convert.rgb.hsl(this.rgb)[1];
-                this.luminosity = convert.rgb.hsl(this.rgb)[2];
-            },
-
-            onColorInput(hue) {
-                this.hue = hue;
-            },
-        },
         watch: {
             power() {
                 this.switch_led()
             },
 
             // update internal hsl values when rgb is changed
-            // (i. e. by broadcast)
+            // (i. e. by broadcast from backend)
             rgb() {
                 this.set_hsl_values_from_rgb()
             },
 
             // send set_color request when hsl values are changed
-
             luminosity() {
-                this.power = this.luminosity > 0;
                 this.set_device_color();
             },
             hue() {
-                this.power = this.luminosity > 0;
                 this.set_device_color();
             },
             saturation() {
-                this.power = this.luminosity > 0;
                 this.set_device_color();
             }
-        }
-        ,
+        },
 
-        computed: {}
-        ,
         created() {
             this.set_hsl_values_from_rgb()
         }
     }
 </script>
+
 <style scoped>
-    @import '~@radial-color-picker/vue-color-picker/dist/vue-color-picker.min.css';
+    @import '~@radial-color-picker/\
+            vue-color-picker/dist/vue-color-picker.min.css';
 
     input[type=range] {
         -webkit-appearance: none;
@@ -135,14 +133,12 @@
         height: 8.4px;
         cursor: pointer;
         animate: 0.2s;
-        /*box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;*/
         background: #3071a9;
         border-radius: 1.3px;
         border: 0.2px solid #010101;
     }
 
     input[type=range]::-webkit-slider-thumb {
-        /*box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;*/
         border: 1px solid #000000;
         height: 36px;
         width: 16px;
@@ -162,14 +158,12 @@
         height: 8.4px;
         cursor: pointer;
         animate: 0.2s;
-        /*box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;*/
         background: #3071a9;
         border-radius: 1.3px;
         border: 0.2px solid #010101;
     }
 
     input[type=range]::-moz-range-thumb {
-        /*box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;*/
         border: 1px solid #000000;
         height: 36px;
         width: 16px;
@@ -193,18 +187,15 @@
         background: #2a6495;
         border: 0.2px solid #010101;
         border-radius: 2.6px;
-        /*box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;*/
     }
 
     input[type=range]::-ms-fill-upper {
         background: #3071a9;
         border: 0.2px solid #010101;
         border-radius: 2.6px;
-        /*box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;*/
     }
 
     input[type=range]::-ms-thumb {
-        /*box-shadow: 1px 1px 1px #000000, 0px 0px 1px #0d0d0d;*/
         border: 1px solid #000000;
         height: 36px;
         width: 16px;
@@ -222,7 +213,6 @@
     }
 
     div {
-        margin: auto;
-        margin-bottom: 1cm;
+        margin: auto auto 1cm;
     }
 </style>
