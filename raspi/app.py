@@ -5,6 +5,7 @@ from flask import Flask, request, jsonify, Response, render_template, send_from_
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 import requests
+import logging
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
@@ -14,15 +15,20 @@ from sql_utils import create_devices_table, create_device_sql, \
 
 
 app = Flask(__name__, static_folder='frontend/dist/')
+# allow for cross origin communication, as frontend and backend run on a
+# different port. As this application is not publicly accessible, there should
+# be no security concerns. Watch out, if you plan to expose your application to
+# the internet.
 CORS(app, resources={r'/*': {'origins': '*'}})
 socket = SocketIO(app, path='/ws/socket.io')
-db_file = 'db/devices.db'
+db_file = 'devices.db'
+log = logging.getLogger(__name__)
 
 # set up HTTPAdapter to use for requests. Plain request does not allow to set
 # the number of retries attempted for an http request.
-
 # set max retries to 1, as put requests send to LEDs are send twice a
-# second anyway
+# second anyway and prevent the application from slowing down, if one client is
+# unreachable.
 retry_strategy = Retry(total=1)
 adapter = HTTPAdapter(max_retries=retry_strategy)
 http = requests.Session()
@@ -35,7 +41,7 @@ def set_up_database():
     """
     Set up SQLite data base to store registered devices and their status.
     """
-    print('Database set up started.')
+    log.debug('Database set up started')
     create_devices_table(db_file)
 
 
@@ -55,7 +61,7 @@ def register_device():
 
         if name in device_list:
             update_device_ip_sql(db_file, name, ip)
-            print('device %s already exists' % name)
+            log.info('device %s already exists' % name)
             msg = {'message': 'device already exists'}
             return jsonify(msg)
 
@@ -65,7 +71,7 @@ def register_device():
                                'ip': ip,
                                'rgb': (0, 0, 0),
                                'power': False})
-            print('device %s registered at %s.' % (name, ip))
+            log.info('device %s registered at %s.' % (name, ip))
             return Response("{'message': 'device created'}",
                             status=201,
                             mimetype='application/json')
@@ -74,21 +80,24 @@ def register_device():
         return jsonify(device_list)
 
 
-@app.route('/devices/<name>', methods=['GET', 'PUT'])
-def device_status(name):
+@app.route('/devices/<device_name>', methods=['GET', 'PUT'])
+def device_status(device_name):
     """
-    Endpoint for communication with frontend for setting device properties.
-    :param name: Name of device whose properties shall be accessed.
-    :return:
+    Endpoint for communication with frontend for setting LED strip properties.
+
+    The GET method is only implemented as a fall back, normally LED device
+    states are send to frontend via websockets.
+
+    :param device_name: Name of device whose properties shall be accessed.
     """
     if request.method == 'GET':
-        device_status = get_device_status_sql(db_file, name)[0]
+        device_status = get_device_status_sql(db_file, device_name)[0]
         return jsonify(device_status)
 
     if request.method == 'PUT':
         # update server data base
         set_device_status_sql(db_file,
-                              device_name=name,
+                              device_name=device_name,
                               status_dict={'rgb': request.json['rgb'],
                                            'power': request.json['power']})
 
@@ -99,24 +108,37 @@ def device_status(name):
 
 @socket.on('connect')
 def client_has_connected():
-    print("A client has connected")
+    """
+    Helper function for debugging.
+    """
+    log.info("A client has connected")
 
 
 @socket.on('getState')
 def send_all_devices_state():
+    """
+    Send state of all LED devices to frontend.
+
+    This is used on frontend start up to start the current colors, etc.
+    """
     all_device_status = get_device_status_sql(db_file)
     emit('stateUpdate', all_device_status)
 
 
 @app.route('/')
 def welcome():
-    # serve frontend application
+    """
+    Serve frontend as a fall back.
+
+    In normal operation this is served by a separate server application, for
+    better performance.
+    """
     return send_from_directory('frontend/dist', 'index.html')
 
 
 def set_device_status(device_name=None):
     """
-    Set state of a wifi controlled device.
+    Set state of a wifi controlled LED device.
 
     :param device_name: Name the device has been registered with. If None set
     device status of all devices in database
@@ -130,16 +152,16 @@ def set_device_status(device_name=None):
 
     # stop if there are no registered devices
     if devices is None:
-        print('No devices registered yet')
+        log.warning('No devices registered yet')
         return None
 
-    # send requests to LED strips
+    # send requests to LED devices
     for i, d in enumerate(devices):
         ip = device_info[i]['ip']
         url = 'http://' + ip + ':80/leds'
-        print('send to %s' % url)
+        log.debug('send to %s' % url)
 
-        # create dictionary to send to LED
+        # create dictionary to send to LED devices
         status_dict = {}
         for j, color in enumerate(['r', 'g', 'b']):
             status_dict.update({color: device_info[i]['rgb'][j]})
@@ -147,9 +169,10 @@ def set_device_status(device_name=None):
 
         # send request to LED
         try:
-            http.put(url, json=status_dict)
+            # set short timeout, as this is send every 0.5 seconds anyway
+            http.put(url, json=status_dict, timeout=0.3)
         except requests.exceptions.ConnectionError:
-            print('could not reach ' + url)
+            log.warning('could not reach ' + url)
 
     # broadcast new status to all connected clients
     all_device_status = get_device_status_sql(db_file)
@@ -166,7 +189,8 @@ def update_leds_continuously():
 
 
 if __name__ == '__main__':
-    # start thread for led stripe setting
-    eventlet.spawn(update_leds_continuously)
     # start app
     socket.run(app, host='0.0.0.0', debug=True, port=4999)
+
+    # start thread for led stripe setting
+    eventlet.spawn(update_leds_continuously)
