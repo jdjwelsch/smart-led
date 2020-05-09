@@ -25,7 +25,7 @@
         },
         data: function () {
             return {
-                server_ip: '192.168.0.78',
+                server_ip: '192.168.0.9',
                 isConnected: false,
                 socketMessage: '',
                 state: [],

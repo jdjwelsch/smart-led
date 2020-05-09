@@ -43,7 +43,7 @@ struct Led {
 
 const char* wifi_ssid = "SSID";
 const char* wifi_passwd = "PWD";
-const char* device_name = "LED Kueche";
+const char* device_name = "LED Jona";
 
 // potentially IP can be set here as well with IPadress addr
 ESP8266WebServer http_rest_server(HTTP_REST_PORT);
@@ -226,7 +226,7 @@ void setup(void) {
 
         // send own ip and device_name to control server
         HTTPClient http;
-        http.begin("http://192.168.0.78:4999/devices");
+        http.begin("http://192.168.0.9:4999/devices");
         http.addHeader("Content-Type", "application/json");
         Serial.println("Send registration to server");
         
