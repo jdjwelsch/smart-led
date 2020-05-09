@@ -4,16 +4,18 @@
 #include <Adafruit_NeoPixel.h>
 #include <ESP8266HTTPClient.h>
 
+/*
+ * TODO: Complete explanation here
+ *
+ * USAGE:
+ * set LED color and brightness with:
+ * curl -i -X PUT -d'{"r":red_val, "g":green_val, "b":blue_val}' http://IP/leds
+ */
+
 #define IPaddress 192
 #define HTTP_REST_PORT 80
 #define WIFI_RETRY_DELAY 500
 #define MAX_WIFI_INIT_RETRY 50
-
-/*
-USAGE:
-set LED color and brightness with:
-curl -i -X PUT -d'{"r":red_val, "g":green_val, "b":blue_val}' http://IP/leds
- */
 
 // pin number connected to LED strip
 #define LED_PIN    14
@@ -23,18 +25,20 @@ curl -i -X PUT -d'{"r":red_val, "g":green_val, "b":blue_val}' http://IP/leds
 
 /*
 define maximum brightness (max is 255)- watch out for power consumption
-with my setup max_brightness = 110 is equivalent to maximum current of 1 A
-@max_brightness = 255: max current ca 1.75 A
+with my setup (60 LEDs) max_brightness = 110 is equivalent to a maximum
+ current of 1 A. @max_brightness = 255: max current ca 1.75 A
 */
 const int max_brightness = 110;
 
 const char *wifi_ssid = "SSID";
 const char *wifi_passwd = "PWD";
+// the name this LED strip will be displayed with in the UI:
 const char *device_name = "LED Jona";
 
 // LED strip object
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
+// LED state object
 struct Led {
     byte r;
     byte g;
@@ -43,17 +47,23 @@ struct Led {
 
 } led_ressource;
 
-// potentially IP can be set here as well with IPadress addr
+// http server for sending ip and name to led control backend
 ESP8266WebServer http_rest_server(HTTP_REST_PORT);
 
-
+/**
+ * Set up on start up.
+ *
+ * The LED strip is initialised with a maximum allowed brightness as set
+ * above, the controller logs into WiFi and registers itself in the backend,
+ * so that state_changes for this LED strip can be send back.
+ */
 void setup(void) {
-    // set bitrate for ESP8266 (experiment with different values if you get
-    // weird serial output)
+    // set bitrate for ESP8266 serial output for debugging
+    // (experiment with different values if you get weird serial output)
     Serial.begin(115200);
 
-    strip.begin();           // INITIALIZE NeoPixel strip object (REQUIRED)
-    strip.show();            // Turn off all pixels
+    strip.begin();           // initialise NeoPixel strip object
+    strip.show();            // turn off all pixels
     strip.setBrightness(max_brightness); // set maximum overall brightness
 
     init_led_ressource();
@@ -91,40 +101,66 @@ void setup(void) {
     Serial.println("HTTP REST Server Started");
 }
 
-
+/**
+ * Loop to keep listening for http requests.
+ */
 void loop(void) {
     http_rest_server.handleClient();
 }
 
-
+/**
+ * Initialise LED state in off and color black.
+ */
 void init_led_ressource() {
     // start with white, half brightness
     led_ressource.r = 0;
     led_ressource.g = 0;
     led_ressource.b = 0;
-    led_ressource.power = true;
+    led_ressource.power = false;
 }
 
-// log into wifi
+/**
+ * Log into wifi.
+ * @return Arduino WiFi status
+ */
 int init_wifi() {
     int retries = 0;
 
-    Serial.println("Connecting to WiFi AP..........");
+    Serial.println("Connecting to WiFi AP...");
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(wifi_ssid, wifi_passwd);
-    // check the status of WiFi connection to be WL_CONNECTED
+    // check the status of WiFi connection to be WL_CONNECTED and retry to
+    // connect otherwise
     while ((WiFi.status() != WL_CONNECTED) && (retries < MAX_WIFI_INIT_RETRY)) {
         retries++;
         delay(WIFI_RETRY_DELAY);
         Serial.print("#");
     }
 
-    return WiFi.status(); // return the WiFi connection status
+    return WiFi.status();
 }
 
-// extract information from json and set variables
-void json_to_resource(JsonDocument &jsonBody) {
+/**
+ * Define routing for API endpoints.
+ */
+void config_rest_server_routing() {
+    http_rest_server.on("/", HTTP_GET, []() {
+        http_rest_server.send(200, "text/html",
+                              "Welcome to the LED strip REST Web Server");
+    });
+    http_rest_server.on("/leds", HTTP_GET, get_leds);
+    http_rest_server.on("/leds", HTTP_POST, post_put_leds);
+    http_rest_server.on("/leds", HTTP_PUT, post_put_leds);
+}
+
+/**
+ * Extract information from json and set state variables.
+ *
+ * @param jsonBody: json containing 'r', 'g', 'b', and 'power key for state
+ * update.
+ */
+void change_state_from_json(JsonDocument &jsonBody) {
     int r, g, b;
     bool power;
 
@@ -139,7 +175,6 @@ void json_to_resource(JsonDocument &jsonBody) {
     Serial.println(g);
     Serial.println(b);
     Serial.println(power);
-
 
     // apply values to led strip
     if (power) {
@@ -164,15 +199,20 @@ void json_to_resource(JsonDocument &jsonBody) {
     led_ressource.power = power;
 }
 
+/**
+ * Do a smooth transition between current color and new color.
+ *
+ * @param r integer, new red value
+ * @param g integer, new green value
+ * @param b inteher, new blue value
+ */
 void smooth_transition(int r, int g, int b) {
-    // do a smooth transition between current color and new rgb values
-
     // number of color steps used in transition
     int n_steps = 30;
     // time in seconds which the whole transition should take
     float transition_time = 1;
 
-    // steps for the single colors
+    // step size for single color channels
     int r_step = (int) ((r - led_ressource.r) / n_steps);
     int g_step = (int) ((g - led_ressource.g) / n_steps);
     int b_step = (int) ((b - led_ressource.b) / n_steps);
@@ -206,7 +246,9 @@ void smooth_transition(int r, int g, int b) {
     strip.show();
 }
 
-
+/**
+ * Send current state of leds to server.
+ */
 void get_leds() {
     StaticJsonDocument<128> jsonObj;
     String serialized;
@@ -220,6 +262,9 @@ void get_leds() {
     http_rest_server.send(200, "application/json", serialized);
 }
 
+/**
+ * Define API endpoint for getting and setting LED state.
+ */
 void post_put_leds() {
     String post_body = http_rest_server.arg("plain");
     Serial.println(post_body);
@@ -236,25 +281,20 @@ void post_put_leds() {
         Serial.println(err.c_str());
         http_rest_server.send(400);
         return;
+
     } else {
         if (http_rest_server.method() == HTTP_POST) {
-            http_rest_server.send(409);
+            // send 'not allowed' as one cannot create new LED devices from
+            // server
+            http_rest_server.send(405);
+
         } else if (http_rest_server.method() == HTTP_PUT) {
             http_rest_server.sendHeader("Location", "/leds/");
             http_rest_server.send(200);
-            json_to_resource(jsonObj);
+            change_state_from_json(jsonObj);
+
         } else {
             http_rest_server.send(404);
         }
     }
-}
-
-void config_rest_server_routing() {
-    http_rest_server.on("/", HTTP_GET, []() {
-        http_rest_server.send(200, "text/html",
-                              "Welcome to the ESP8266 REST Web Server");
-    });
-    http_rest_server.on("/leds", HTTP_GET, get_leds);
-    http_rest_server.on("/leds", HTTP_POST, post_put_leds);
-    http_rest_server.on("/leds", HTTP_PUT, post_put_leds);
 }
