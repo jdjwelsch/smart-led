@@ -1,4 +1,7 @@
 import sqlite3
+import logging
+
+log = logging.getLogger(__name__)
 
 
 def _create_db_connection(db_path):
@@ -12,7 +15,7 @@ def _create_db_connection(db_path):
     try:
         conn = sqlite3.connect(db_path)
     except sqlite3.Error as e:
-        print(e)
+        log.error(e)
 
     return conn
 
@@ -46,7 +49,7 @@ def create_devices_table(db_path):
         cursor.execute(create_table_sql)
 
     except sqlite3.Error as e:
-        print(e)
+        log.error(e)
     finally:
         if conn is not None:
             conn.close()
@@ -62,7 +65,7 @@ def create_device_sql(db_path, device_dict):
     """
     conn = None
     try:
-        print('Write device to sql database')
+        log.debug('Write device to sql database')
         conn = _create_db_connection(db_path)
 
         with conn:
@@ -81,7 +84,7 @@ def create_device_sql(db_path, device_dict):
             cursor.execute(sql, device_values)
 
     except sqlite3.Error as e:
-        print(e)
+        log.error(e)
 
     finally:
         if conn is not None:
@@ -110,7 +113,7 @@ def update_device_ip_sql(db_path, device_name, ip):
             conn.commit()
 
     except sqlite3.Error as e:
-        print(e)
+        log.error(e)
 
     finally:
         if conn is not None:
@@ -119,7 +122,7 @@ def update_device_ip_sql(db_path, device_name, ip):
 
 def set_device_status_sql(db_path, device_name, status_dict):
     """
-    Set the status (i. e. RGB values) of a device.
+    Set the status (i. e. RGB and power values) of a device.
 
     :param db_path: string, path to .db file
     :param device_name: string, name of device
@@ -148,7 +151,7 @@ def set_device_status_sql(db_path, device_name, status_dict):
             conn.commit()
 
     except sqlite3.Error as e:
-        print(e)
+        log.error(e)
 
     finally:
         if conn is not None:
@@ -195,7 +198,7 @@ def get_device_status_sql(db_path, device_name=None):
             return status_list
 
     except sqlite3.Error as e:
-        print(e)
+        log.error(e)
 
     finally:
         if conn is not None:
@@ -224,7 +227,7 @@ def get_device_list_sql(db_path):
         return device_list
 
     except sqlite3.Error as e:
-        print(e)
+        log.error(e)
 
     finally:
         if conn is not None:
