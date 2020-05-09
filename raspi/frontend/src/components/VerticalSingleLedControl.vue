@@ -56,6 +56,7 @@
                 }
                 ,
 
+
                 set_device_color() {
                     let now = Date.now();
                     // only send if there has not been an update in last 100 ms
