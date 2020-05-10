@@ -3,8 +3,9 @@ Smart Home project for controlling LED strips with a web application.
 This mainly meant to be taken as an inspiration for other who want to
  implement a similar project.
  
-![frontend application][screenshot-frontend.png]
+![frontend application](screenshot-frontend.png)
 
+Screenshot of the frontend application to set the LED strip state.
 
 ## Introduction
 This project uses WS2812 LED strips and ESP8266 WiFi controller to control 
@@ -47,8 +48,16 @@ Also check that you entered the correct IP address and port for your backend
 ## Set up backend
 TODO:
   - requirements
-  
-The backend is a flask app, so to test it, simply start it with `python
+ 
+The backend handles http PUT requests from the frontend application to set
+the state of a certain LED strip with a RGB color and an on/off variable.
+The current states for all LED strips are stored in a sqlite3 database, so
+that the access is thread-safe. If you want the backend to forget all devices
+, which have registered, simply delete `devices.db`. The backend will create
+ a new database automatically, if there is none.
+
+The backend is implemented as a flask app, so to test it, simply start it with
+ `python
  backend.py`, but you can also use a proper WSGI server. I made this script a
   service on my  Raspberry Pi, so that it automatically starts when the Pi
    boots.
@@ -92,3 +101,19 @@ NOTE: This is necessary because my backend and frontend do not listen to the
   flask backend app serve the frontend application, but this could
    theoretically lead to a performance issue, as it is not recommended to serve
     static directories with flask in production. 
+    
+## Usage
+Once you set up your ESP8266 with LED strips, the frontend, and the backend, you
+can start controlling your led strips:
+
+1) Make sure your frontend app and backend app are running.
+
+2) Switch on the power on your LED strip with the ESP8266.\
+It is important, that you do this **after** your backend has started, because
+the LED strip needs to register itself with the backend, and it does this on
+start up.
+
+3) You should now be ready to control your LED strip with the web interface: 
+Go to the IP address of your backend and frontend serving device (in my
+case the Raspberry Pi) and you should see something similar to the screenshot
+above. 
