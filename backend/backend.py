@@ -71,7 +71,7 @@ def register_device():
                                         {'name': name,
                                          'ip': ip,
                                          'rgb': (0, 0, 0),
-                                         'power': False})
+                                         'power': 0})
             log.info('device %s registered at %s.' % (name, ip))
             return Response("{'message': 'device created'}",
                             status=201,
@@ -217,6 +217,8 @@ def set_device_status(device_name=None):
 
 
 if __name__ == '__main__':
+    # use this to get more informative output when debugging:
+    # logging.basicConfig(level=logging.DEBUG)
     # start app
     socket.run(app, host='0.0.0.0', debug=False, port=4999)
 

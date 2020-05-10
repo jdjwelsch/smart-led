@@ -46,6 +46,7 @@ def create_devices_table(db_path):
         # set up table
         cursor = conn.cursor()
         cursor.execute(create_table_sql)
+        conn.commit()
 
 
 def create_device_sql(db_path, device_dict):
@@ -68,10 +69,11 @@ def create_device_sql(db_path, device_dict):
                          device_dict['power'])
 
         sql = """ INSERT INTO devices(name, ip, r, g, b, power)
-                 VALUES(?, ?, ?, ?, ?, ?);
+                 VALUES(?, ?, ?, ?, ?, ?)
               """
         cursor = conn.cursor()
         cursor.execute(sql, device_values)
+        conn.commit()
 
 
 def update_device_ip_sql(db_path, device_name, ip):
