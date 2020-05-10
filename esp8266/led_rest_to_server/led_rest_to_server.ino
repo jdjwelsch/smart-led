@@ -5,11 +5,26 @@
 #include <ESP8266HTTPClient.h>
 
 /*
- * TODO: Complete explanation here
+ * This is an implementation for controlling a NeoPixel LED strip with a
+ * ESP8266 WiFi Controller by http requests. It consists of two parts:
+ * The first (bigger) part is the http server, receiving http PUT requests to
+ * set the color of the LED strip.
+ * The second part, which is currently only used on start up, is a http
+ * client which sends a PUT request to the backend server to register itself
+ * with a name and the IP address of the controller, so that the backend
+ * knows, where to send state updates to.
  *
- * USAGE:
- * set LED color and brightness with:
- * curl -i -X PUT -d'{"r":red_val, "g":green_val, "b":blue_val}' http://IP/leds
+ * There are a few variables which need to be set for your specific set up,
+ * such as the number of LEDs in your strip or your WiFi credentials.
+ * They can be found below, each with an explanation.
+ *
+ * To test the http server side, just send a http PUT request containing r,
+ * g, b, and power values to the IP address of this WiFi Controller, for
+ * example with curl:
+ * curl -i -X PUT -d'{"r":red_val, "g":green_val, "b":blue_val, "power": 1}'
+ * http://IP/leds
+ *
+ * This API was inspired by https://github.com/mancusoa74/Simple_REST_ESP8266.
  */
 
 #define IPaddress 192
@@ -24,16 +39,19 @@
 #define LED_COUNT 60
 
 /*
-define maximum brightness (max is 255)- watch out for power consumption
-with my setup (60 LEDs) max_brightness = 110 is equivalent to a maximum
- current of 1 A. @max_brightness = 255: max current ca 1.75 A
+* define maximum brightness (max is 255)- watch out for power consumption and
+* take your own measurements!
+* (with my setup (60 LEDs) max_brightness = 110 is equivalent to a maximum
+* current of 1 A. @max_brightness = 255: max current ca 1.75 A)
 */
 const int max_brightness = 110;
 
 const char *wifi_ssid = "SSID";
 const char *wifi_passwd = "PWD";
 // the name this LED strip will be displayed with in the UI:
-const char *device_name = "LED Jona";
+const char *device_name = "LED living room";
+// endpoint and address for backend - this is where registration is send to
+const char *backend_endpoint = "http://192.168.0.9:4999/devices";
 
 // LED strip object
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
@@ -75,7 +93,7 @@ void setup(void) {
 
         // send own ip and device_name to control server
         HTTPClient http;
-        http.begin("http://192.168.0.9:4999/devices");
+        http.begin(backend_endpoint);
         http.addHeader("Content-Type", "application/json");
         Serial.println("Send registration to server");
 
@@ -157,7 +175,7 @@ void config_rest_server_routing() {
 /**
  * Extract information from json and set state variables.
  *
- * @param jsonBody: json containing 'r', 'g', 'b', and 'power key for state
+ * @param jsonBody: json containing 'r', 'g', 'b', and 'power' keys for state
  * update.
  */
 void change_state_from_json(JsonDocument &jsonBody) {
@@ -204,7 +222,7 @@ void change_state_from_json(JsonDocument &jsonBody) {
  *
  * @param r integer, new red value
  * @param g integer, new green value
- * @param b inteher, new blue value
+ * @param b integer, new blue value
  */
 void smooth_transition(int r, int g, int b) {
     // number of color steps used in transition
