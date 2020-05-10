@@ -80,19 +80,20 @@ wait until the next registration is send from your ESP8266.*
 3) You should now be ready to control your LED strip with the web interface.
 
 ## Set up LED Strip and WiFi Controller
-This section consists of two parts: Assembling the electronic parts and
- preparing the .ino file for the controller software.
- 
+
 ### Soldering together LED Strip and ESP8266
-This part is not finished yet
-   TODO:
+(This part is work in progress. In the mean time you can get inspiration on
+how to realise this part for example [here](https://www.instructables.com/id/ESP8266-controlling-Neopixel-LEDs-using-Arduino-ID/)).
+
+TODO:
    - list of parts needed
    - circuit diagram
    
 ### Flashing software on ESP8266
-The ESP8266 can be flashed with the standard Arduino IDE. Download it and set it
-up to find your ESP8266, the detailed process for that might depend on your
- operating system and there are plenty of resources describing it (i.e. [here](https://randomnerdtutorials.com/how-to-install-esp8266-board-arduino-ide/)).
+Once you finished the hardware part, the ESP8266 can be flashed with the
+standard Arduino IDE. Download it and set it up to find your ESP8266, the
+detailed process for that might depend on your operating system and there are
+ plenty of resources describing it (i.e. [here](https://randomnerdtutorials.com/how-to-install-esp8266-board-arduino-ide/)).
 
 The file to be flashed on to your ESP8266 can be found
 [here](esp8266/led_rest_api/led_rest_api.ino).
