@@ -46,9 +46,6 @@ Also check that you entered the correct IP address and port for your backend
   register itself on start up.
 
 ## Set up backend
-TODO:
-  - requirements
- 
 The backend handles http PUT requests from the frontend application to set
 the state of a certain LED strip with a RGB color and an on/off variable.
 The current states for all LED strips are stored in a sqlite3 database, so
@@ -56,12 +53,22 @@ that the access is thread-safe. If you want the backend to forget all devices
 , which have registered, simply delete `devices.db`. The backend will create
  a new database automatically, if there is none.
 
-The backend is implemented as a flask app, so to test it, simply start it with
- `python
- backend.py`, but you can also use a proper WSGI server. I made this script a
-  service on my  Raspberry Pi, so that it automatically starts when the Pi
-   boots.
-   
+The backend is implemented as a flask application, so to test it, simply
+start it with `python backend.py`, but you can also use a proper WSGI server
+.  I made this script a service on my  Raspberry Pi, so that it automatically
+starts when the Pi boots.
+
+### Requirements
+The backend is tested for python 3.6 and 3.8 and requires
+the following python packages to be installed:
+- flask
+- eventlet
+- flask_socketio
+- flask_cors
+- requests
+- logging
+- sqlite3
+
 ## Set up frontend
 The frontend is served at the root directory of the flask app as a
 backup, but you should use a webserver such as nginx or lighttpd, as this
