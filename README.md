@@ -50,12 +50,14 @@ The backend handles http PUT requests from the frontend application to set
 the state of a certain LED strip with a RGB color and an on/off variable.
 The current states for all LED strips are stored in a sqlite3 database, so
 that the access is thread-safe. If you want the backend to forget all devices
-, which have registered, simply delete `devices.db`. The backend will create
- a new database automatically, if there is none.
+ which have registered, simply delete `devices.db`. The backend will create
+ a new database automatically if there is no file named `devices.db`.
 
 The backend is implemented as a flask application, so to test it, simply
-start it with `python backend.py`, but you can also use a proper WSGI server
-.  I made this script a service on my  Raspberry Pi, so that it automatically
+start it with `python backend.py`. You can also use a proper WSGI server for
+ deployment.
+ 
+ I made this script a service on my  Raspberry Pi, so that it automatically
 starts when the Pi boots.
 
 ### Requirements
@@ -75,8 +77,8 @@ backup, but you should use a webserver such as nginx or lighttpd, as this
 will probably be more stable.
 
 The backend communicates the current state of all LED strips live to all
-connected frontend clients via websockets, so that the state displayed
-always matches the actual state of the LED strip.
+connected frontend clients via websockets, so that the displayed state always
+matches the actual state of the LED strip.
  
 For this to work, you will have to set up a proxy path in the webserver. You
  will need to proxy all traffic send to `/ws/socket.io/` to the port of your
@@ -103,11 +105,11 @@ server {
    }
 }
 ```
-NOTE: This is necessary because my backend and frontend do not listen to the
+*NOTE: This is necessary because my backend and frontend do not listen to the
  same port. It is possible to handle this differently by letting the
   flask backend app serve the frontend application, but this could
    theoretically lead to a performance issue, as it is not recommended to serve
-    static directories with flask in production. 
+    static directories with flask in production.* 
     
 ## Usage
 Once you set up your ESP8266 with LED strips, the frontend, and the backend, you
