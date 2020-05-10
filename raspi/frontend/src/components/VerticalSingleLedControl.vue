@@ -116,8 +116,7 @@
 </script>
 
 <style scoped>
-    @import '~@radial-color-picker/\
-            vue-color-picker/dist/vue-color-picker.min.css';
+    @import '~@radial-color-picker/vue-color-picker/dist/vue-color-picker.min.css';
 
     /*
     css styling for the range slider was inspired by
