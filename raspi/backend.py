@@ -22,6 +22,8 @@ app = Flask(__name__, static_folder='frontend/dist/')
 CORS(app, resources={r'/*': {'origins': '*'}})
 socket = SocketIO(app, path='/ws/socket.io')
 db_file = 'devices.db'
+state_update_running = False
+
 
 # set up HTTPAdapter to use for requests. Plain request does not allow to set
 # the number of retries attempted for an http request.
@@ -101,6 +103,9 @@ def device_status(device_name):
                                         device_name=device_name,
                                         status_dict=status_dict)
 
+        # start update thread
+        update_leds()
+
         return Response("{'message': 'status changed'}",
                         status=201,
                         mimetype='application/json')
@@ -119,21 +124,52 @@ def send_all_devices_state():
     """
     Send state of all LED devices to frontend.
 
-    This is used on frontend start up to start the current colors, etc.
+    This is used on frontend start up to set the current colors, etc.
     """
     all_device_status = sql_utils.get_device_status_sql(db_file)
     emit('stateUpdate', all_device_status)
 
 
-@app.route('/')
-def welcome():
+def update_leds():
     """
-    Serve frontend as a fall back.
+    Sends the current setting to all LED devices in database every 0.5
+    seconds for n_requests times.
 
-    In normal operation this is served by a separate server application, for
-    better performance.
+    This is done to ensure that multiple requests to change the LED color
+    coming in within a very short time span will not all be send to the
+    device. Instead the database is evaluated every 0.5s, for a few times,
+    which allows for a smoother color transition.
+    :param n_requests: integer, how many times LED state will be updated,
+    once this function was triggered.
     """
-    return send_from_directory('frontend/dist', 'index.html')
+    global state_update_running
+
+    # only start update, if there is not already an update running
+    if state_update_running:
+        return
+    else:
+        state_update_running = True
+        # start update in separate thread, so that it does not block incoming
+        # requests
+        eventlet.spawn(_send_led_state_update)
+
+
+def _send_led_state_update():
+    """
+    Wait for 0.5 seconds, then send a state update to all registered LED
+    devices.
+
+    This is to accommodate situations when many requests to set the LED
+    color are sent to the backend within a short time span - this way the
+    current state is evaluated and sent to the LED strips at maximum every
+    0.5 seconds.
+    """
+    eventlet.sleep(0.5)
+    set_device_status()
+
+    # allow for spawning a new update thread, once finished
+    global state_update_running
+    state_update_running = False
 
 
 def set_device_status(device_name=None):
@@ -167,30 +203,20 @@ def set_device_status(device_name=None):
             status_dict.update({color: device_info[i]['rgb'][j]})
         status_dict.update({'power': device_info[i]['power']})
 
-        # send request to LED
+        # send to LED devices
         try:
-            # set short timeout, as this is send every 0.5 seconds anyway
+            # set short timeout, so that unreachable devices don't slow down
+            # the app
             http.put(url, json=status_dict, timeout=0.3)
         except requests.exceptions.ConnectionError:
-            log.warning('could not reach ' + url)
+            log.info('could not reach ' + url)
 
     # broadcast new status to all connected clients
     all_device_status = sql_utils.get_device_status_sql(db_file)
     socket.emit('stateUpdate', all_device_status, broadcast=True)
 
 
-def update_leds_continuously():
-    """
-    Sends the current setting to all LED devices in database twice per second.
-    """
-    while True:
-        set_device_status()
-        eventlet.sleep(0.5)
-
-
 if __name__ == '__main__':
     # start app
-    socket.run(app, host='0.0.0.0', debug=True, port=4999)
+    socket.run(app, host='0.0.0.0', debug=False, port=4999)
 
-    # start thread for led stripe setting
-    eventlet.spawn(update_leds_continuously)
