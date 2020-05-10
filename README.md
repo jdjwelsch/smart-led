@@ -20,7 +20,7 @@ The ESP8266 can be flashed with the standard Arduino IDE. Download it and set it
 up to find your ESP8266, the detailed process for that might depend on your
  operating system and there are plenty of resources describing it.
 
-The file to be flashed on to your ESP8266 can be found here: [test](esp8266
+The file to be flashed on to your ESP8266 can be found here: [test](../blob/master/esp8266
 /led_rest_api/led_rest_api.ino)
  
  
