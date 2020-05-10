@@ -119,6 +119,11 @@
     @import '~@radial-color-picker/\
             vue-color-picker/dist/vue-color-picker.min.css';
 
+    /*
+    css styling for the range slider was inspired by
+    http://danielstern.ca/range.css/#/
+     */
+
     input[type=range] {
         -webkit-appearance: none;
         margin: 18px 0;
