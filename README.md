@@ -1,5 +1,7 @@
 # smart-led
 Smart Home project for controlling LED strips with a web application.
+This mainly meant to be taken as an inspiration for other who want to
+ implement a similar project.
 
 ## Introduction
 This project uses WS2812 LED strips and ESP8266 WiFi controller to control 
@@ -35,3 +37,53 @@ Once you've flashed the file onto the ESP8266, you can test it by sending a
   curl -i -X PUT -d'{"r":255, "g":0, "b":0, "power": 1}' http://[ESP8266_IP]/leds
   ```
 
+Also check that you entered the correct IP address and port for your backend
+ server in this script, as this is important for the device to be able to
+  register itself oon start up.
+
+## Set up backend
+TODO:
+  - requirements
+  
+The backend is a flask app, so to test it, simply start it with `python
+ backend.py`, but you can also use a proper WSGI server. I made this script a
+  service on my  Raspberry Pi, so that it automatically starts when the Pi
+   boots.
+   
+## Set up frontend
+TODO:
+- screenshot
+
+The frontend is served at the root directory of the flask app as a
+backup, but you should use a webserver such as nginx or lighttpd, as this
+will probably be more stable.
+
+The backend communicates the current state of all LED strips live to all
+connected frontend clients via websockets, so that the state displayed
+always matches the actual state of the LED strip.
+ 
+For this to work, you will have to set up a proxy path in the webserver. You
+ will need to proxy all traffic send to `/ws/socket.io/` to the port of your
+  backend. The way how to do this will depend on the serving application ypu
+   are using. In my case using nginx and my backend port being 4999, the
+    nginx site configuration file looks like this:
+    
+```
+server {
+   listen 80;
+   listen [::]80;
+
+   root [root directory of your project]/smart-led/frontend/dist;
+
+   index index.html;
+
+   location /ws/socket.io/ {
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
+      proxy_http_version 1.1;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header Host $host;
+      proxy_pass http://localhost:4999;
+   }
+}
+```
