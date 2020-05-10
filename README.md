@@ -1,17 +1,17 @@
 # smart-led
 Smart Home project for controlling LED strips with a web application.
-This mainly meant to be taken as an inspiration for other who want to
+This is mainly meant to be taken as an inspiration for others who want to
  implement a similar project.
  
-![frontend application](screenshot-frontend.png)
-
-Screenshot of the frontend application to set the LED strip state.
-
 ## Introduction
 This project uses WS2812 LED strips and ESP8266 WiFi controller to control 
 LED strips via WiFi. It also contains a web application to control multiple 
 LED strips with a graphical frontend. This web application will need a device to
  run on. In my case I used a Raspberry Pi 3. 
+
+![frontend application](screenshot-frontend.png)
+
+Screenshot of the frontend application to set the LED strip state.
 
 
 ## Set up LED Strip and WiFi Controller
