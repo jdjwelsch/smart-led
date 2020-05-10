@@ -3,7 +3,7 @@ Smart Home project for controlling LED strips with a web application.
 This mainly meant to be taken as an inspiration for other who want to
  implement a similar project.
  
-![frontend application][screenshot-frontend.png]
+![frontend application](screenshot-frontend.png)
 
 
 ## Introduction
