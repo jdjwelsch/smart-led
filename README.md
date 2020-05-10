@@ -82,7 +82,7 @@ matches the actual state of the LED strip.
  
 For this to work, you will have to set up a proxy path in the webserver. You
  will need to proxy all traffic send to `/ws/socket.io/` to the port of your
-  backend. The exact way to do this will depend on the serving application
+  backend. The exact way to do this will depend on the webserver
    you are using. In my case (using nginx and my backend port being 4999), the
     nginx site configuration file looks like this:
     
@@ -121,6 +121,10 @@ can start controlling your led strips:
 It is important, that you do this **after** your backend has started, because
 the LED strip needs to register itself with the backend, and it does this on
 start up.
+*Note: You could also modify the code for your ESP8266 to send a registration to
+the backend server in a fixed interval. Then the order in which you start
+backend server and ESP8266 does not matter anymore, you might just need to
+wait until the next registration is send from your ESP8266.*
 
 3) You should now be ready to control your LED strip with the web interface: 
 Go to the IP address of your backend and frontend serving device (in my
