@@ -32,5 +32,4 @@ The file to be flashed on to your ESP8266 can be found here:
       curl -i -X PUT -d'{"r":255, "g":0, "b":0, "power": 1
       }' http://[ESP8266_IP]/leds
       ```
- 
- 
+
