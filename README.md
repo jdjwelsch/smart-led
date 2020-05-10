@@ -20,7 +20,17 @@ The ESP8266 can be flashed with the standard Arduino IDE. Download it and set it
 up to find your ESP8266, the detailed process for that might depend on your
  operating system and there are plenty of resources describing it.
 
-The file to be flashed on to your ESP8266 can be found here: [../esp8266
-/led_rest_api/led_rest_api.ino]
+The file to be flashed on to your ESP8266 can be found here:
+[esp8266/led_rest_api/led_rest_api.ino] - You will need to adjust some
+ settings in this file before flashing it, such as your WiFi credentials, the
+  pin you're using on the ESP8266, and the number of LEDs on your strip. All
+   these settings are at the top of the file and are explained there. Once
+    you've flashed the file onto the ESP8266, you can test it by sending a
+     simple http PUT request to the Controller. For example to set its color
+      to red, send a request with curl:
+      ```bash
+      curl -i -X PUT -d'{"r":255, "g":0, "b":0, "power": 1
+      }' http://[ESP8266_IP]/leds
+      ```
  
  
