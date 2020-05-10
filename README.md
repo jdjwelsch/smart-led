@@ -13,6 +13,26 @@ LED strips with a graphical frontend. This web application will need a device to
 
 Screenshot of the frontend application to set the LED strip state.
 
+## Usage
+Once you set up your ESP8266 with LED strips, the frontend, and the backend, you
+can start controlling your led strips:
+
+1) Make sure your frontend app and backend app are running.
+
+2) Switch on the power on your LED strip with the ESP8266.\
+It is important, that you do this **after** your backend has started, because
+the LED strip needs to register itself with the backend, and it does this on
+start up. \
+*Note: You could also modify the code for your ESP8266 to send a registration to
+the backend server in a fixed interval. Then the order in which you start
+backend server and ESP8266 does not matter anymore, you might just need to
+wait until the next registration is send from your ESP8266.*
+
+3) You should now be ready to control your LED strip with the web interface: 
+Go to the IP address of your backend and frontend serving device (in my
+case the Raspberry Pi) and you should see something similar to the screenshot
+above.
+
 
 ## Set up LED Strip and WiFi Controller
 
@@ -70,8 +90,10 @@ the following python packages to be installed:
 - requests
 - logging
 - sqlite3
+requirements.txt with pip freeze
 
 ## Set up frontend
+TODO Set server ip in App.vue
 The frontend is served at the root directory of the flask app as a
 backup, but you should use a webserver such as nginx or lighttpd, as this
 will probably be more stable.
@@ -81,7 +103,7 @@ connected frontend clients via websockets, so that the displayed state always
 matches the actual state of the LED strip.
  
 For this to work, you will have to set up a proxy path in the webserver. You
- will need to proxy all traffic send to `/ws/socket.io/` to the port of your
+ will need to proxy all traffic sent to `/ws/socket.io/` to the port of your
   backend. The exact way to do this will depend on the webserver
    you are using. In my case (using nginx and my backend port being 4999), the
     nginx site configuration file looks like this:
@@ -111,23 +133,5 @@ server {
    theoretically lead to a performance issue, as it is not recommended to serve
     static directories with flask in production.* 
     
-## Usage
-Once you set up your ESP8266 with LED strips, the frontend, and the backend, you
-can start controlling your led strips:
 
-1) Make sure your frontend app and backend app are running.
-
-2) Switch on the power on your LED strip with the ESP8266.\
-It is important, that you do this **after** your backend has started, because
-the LED strip needs to register itself with the backend, and it does this on
-start up. \
-*Note: You could also modify the code for your ESP8266 to send a registration to
-the backend server in a fixed interval. Then the order in which you start
-backend server and ESP8266 does not matter anymore, you might just need to
-wait until the next registration is send from your ESP8266.*
-
-3) You should now be ready to control your LED strip with the web interface: 
-Go to the IP address of your backend and frontend serving device (in my
-case the Raspberry Pi) and you should see something similar to the screenshot
-above. 
 
