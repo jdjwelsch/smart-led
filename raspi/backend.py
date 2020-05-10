@@ -9,10 +9,10 @@ import logging
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-from sql_utils import create_devices_table, create_device_sql, \
-    set_device_status_sql, \
-    get_device_status_sql, get_device_list_sql, update_device_ip_sql
+import sql_utils
 
+
+log = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder='frontend/dist/')
 # allow for cross origin communication, as frontend and backend run on a
@@ -22,7 +22,6 @@ app = Flask(__name__, static_folder='frontend/dist/')
 CORS(app, resources={r'/*': {'origins': '*'}})
 socket = SocketIO(app, path='/ws/socket.io')
 db_file = 'devices.db'
-log = logging.getLogger(__name__)
 
 # set up HTTPAdapter to use for requests. Plain request does not allow to set
 # the number of retries attempted for an http request.
@@ -42,7 +41,7 @@ def set_up_database():
     Set up SQLite data base to store registered devices and their status.
     """
     log.debug('Database set up started')
-    create_devices_table(db_file)
+    sql_utils.create_devices_table(db_file)
 
 
 @app.route('/devices', methods=['GET', 'POST'])
@@ -54,23 +53,23 @@ def register_device():
     fields 'ip' and 'name'.
     :return:
     """
-    device_list = get_device_list_sql(db_file)
+    device_list = sql_utils.get_device_list_sql(db_file)
     if request.method == 'POST':
         name = request.json['name']
         ip = request.json['ip']
 
         if name in device_list:
-            update_device_ip_sql(db_file, name, ip)
+            sql_utils.update_device_ip_sql(db_file, name, ip)
             log.info('device %s already exists' % name)
             msg = {'message': 'device already exists'}
             return jsonify(msg)
 
         else:
-            create_device_sql(db_file,
-                              {'name': name,
-                               'ip': ip,
-                               'rgb': (0, 0, 0),
-                               'power': False})
+            sql_utils.create_device_sql(db_file,
+                                        {'name': name,
+                                         'ip': ip,
+                                         'rgb': (0, 0, 0),
+                                         'power': False})
             log.info('device %s registered at %s.' % (name, ip))
             return Response("{'message': 'device created'}",
                             status=201,
@@ -91,15 +90,16 @@ def device_status(device_name):
     :param device_name: Name of device whose properties shall be accessed.
     """
     if request.method == 'GET':
-        device_status = get_device_status_sql(db_file, device_name)[0]
+        device_status = sql_utils.get_device_status_sql(db_file, device_name)[0]
         return jsonify(device_status)
 
     if request.method == 'PUT':
         # update server data base
-        set_device_status_sql(db_file,
-                              device_name=device_name,
-                              status_dict={'rgb': request.json['rgb'],
-                                           'power': request.json['power']})
+        status_dict = {'rgb': request.json['rgb'],
+                       'power': request.json['power']}
+        sql_utils.set_device_status_sql(db_file,
+                                        device_name=device_name,
+                                        status_dict=status_dict)
 
         return Response("{'message': 'status changed'}",
                         status=201,
@@ -121,7 +121,7 @@ def send_all_devices_state():
 
     This is used on frontend start up to start the current colors, etc.
     """
-    all_device_status = get_device_status_sql(db_file)
+    all_device_status = sql_utils.get_device_status_sql(db_file)
     emit('stateUpdate', all_device_status)
 
 
@@ -145,10 +145,10 @@ def set_device_status(device_name=None):
     """
     # set all devices if not specified
     if device_name is None:
-        devices = get_device_list_sql(db_file)
+        devices = sql_utils.get_device_list_sql(db_file)
     else:
         devices = [device_name]
-    device_info = get_device_status_sql(db_file, device_name)
+    device_info = sql_utils.get_device_status_sql(db_file, device_name)
 
     # stop if there are no registered devices
     if devices is None:
@@ -175,7 +175,7 @@ def set_device_status(device_name=None):
             log.warning('could not reach ' + url)
 
     # broadcast new status to all connected clients
-    all_device_status = get_device_status_sql(db_file)
+    all_device_status = sql_utils.get_device_status_sql(db_file)
     socket.emit('stateUpdate', all_device_status, broadcast=True)
 
 
