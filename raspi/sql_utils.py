@@ -1,23 +1,23 @@
 import sqlite3
 import logging
+from contextlib import contextmanager
 
 log = logging.getLogger(__name__)
 
 
-def _create_db_connection(db_path):
+@contextmanager
+def _managed_db_connection(db_path):
     """
-    Establish connection to data base.
+    Manage connection to data base, ensuring that it is always closed after use.
 
     :param db_path: string, path to .db file
-    :return: connection object
     """
-    conn = None
+    conn = sqlite3.connect(db_path)
     try:
-        conn = sqlite3.connect(db_path)
-    except sqlite3.Error as e:
-        log.error(e)
+        yield conn
 
-    return conn
+    finally:
+        conn.close()
 
 
 def create_devices_table(db_path):
@@ -29,10 +29,9 @@ def create_devices_table(db_path):
 
     :param db_path: string, path to .db file
     """
-    conn = None
-    try:
-        # connect to database and create file, if it does not exist
-        conn = _create_db_connection(db_path)
+
+    # connect to database and create file, if it does not exist
+    with _managed_db_connection(db_path) as conn:
 
         # define table with SQL string
         create_table_sql = """ CREATE TABLE IF NOT EXISTS devices (
@@ -48,12 +47,6 @@ def create_devices_table(db_path):
         cursor = conn.cursor()
         cursor.execute(create_table_sql)
 
-    except sqlite3.Error as e:
-        log.error(e)
-    finally:
-        if conn is not None:
-            conn.close()
-
 
 def create_device_sql(db_path, device_dict):
     """
@@ -63,32 +56,22 @@ def create_device_sql(db_path, device_dict):
     :param device_dict: dictionary containing keys 'name', 'ip', 'r', 'g', 'b',
     'power' for new device
     """
-    conn = None
-    try:
+    with _managed_db_connection(db_path) as conn:
         log.debug('Write device to sql database')
-        conn = _create_db_connection(db_path)
 
-        with conn:
-            # write new device to db table
-            device_values = (device_dict['name'],
-                             device_dict['ip'],
-                             device_dict['rgb'][0],
-                             device_dict['rgb'][1],
-                             device_dict['rgb'][2],
-                             device_dict['power'])
+        # write new device to db table
+        device_values = (device_dict['name'],
+                         device_dict['ip'],
+                         device_dict['rgb'][0],
+                         device_dict['rgb'][1],
+                         device_dict['rgb'][2],
+                         device_dict['power'])
 
-            sql = """ INSERT INTO devices(name, ip, r, g, b, power)
-                     VALUES(?, ?, ?, ?, ?, ?);
-                  """
-            cursor = conn.cursor()
-            cursor.execute(sql, device_values)
-
-    except sqlite3.Error as e:
-        log.error(e)
-
-    finally:
-        if conn is not None:
-            conn.close()
+        sql = """ INSERT INTO devices(name, ip, r, g, b, power)
+                 VALUES(?, ?, ?, ?, ?, ?);
+              """
+        cursor = conn.cursor()
+        cursor.execute(sql, device_values)
 
 
 def update_device_ip_sql(db_path, device_name, ip):
@@ -100,24 +83,13 @@ def update_device_ip_sql(db_path, device_name, ip):
     updated
     :param ip: string, new ip address
     """
-    conn = None
-    try:
-        conn = _create_db_connection(db_path)
+    with _managed_db_connection(db_path) as conn:
+        sql = """ UPDATE devices
+                  SET ip = ? WHERE name = ?"""
 
-        with conn:
-            sql = """ UPDATE devices
-                      SET ip = ? WHERE name = ?"""
-
-            cursor = conn.cursor()
-            cursor.execute(sql, (ip, device_name))
-            conn.commit()
-
-    except sqlite3.Error as e:
-        log.error(e)
-
-    finally:
-        if conn is not None:
-            conn.close()
+        cursor = conn.cursor()
+        cursor.execute(sql, (ip, device_name))
+        conn.commit()
 
 
 def set_device_status_sql(db_path, device_name, status_dict):
@@ -128,34 +100,23 @@ def set_device_status_sql(db_path, device_name, status_dict):
     :param device_name: string, name of device
     :param status_dict: dict, containing keys 'rgb' and 'power'
     """
-    conn = None
-    try:
-        conn = _create_db_connection(db_path)
+    with _managed_db_connection(db_path) as conn:
+        new_values = (status_dict['rgb'][0],
+                      status_dict['rgb'][1],
+                      status_dict['rgb'][2],
+                      status_dict['power'],
+                      device_name)
 
-        with conn:
-            new_values = (status_dict['rgb'][0],
-                          status_dict['rgb'][1],
-                          status_dict['rgb'][2],
-                          status_dict['power'],
-                          device_name)
+        sql = """ UPDATE devices
+                  SET r = ?,
+                      g = ?,
+                      b = ?,
+                      power = ?
+                  WHERE name = ?"""
 
-            sql = """ UPDATE devices
-                      SET r = ?,
-                          g = ?,
-                          b = ?,
-                          power = ?
-                      WHERE name = ?"""
-
-            cursor = conn.cursor()
-            cursor.execute(sql, new_values)
-            conn.commit()
-
-    except sqlite3.Error as e:
-        log.error(e)
-
-    finally:
-        if conn is not None:
-            conn.close()
+        cursor = conn.cursor()
+        cursor.execute(sql, new_values)
+        conn.commit()
 
 
 def get_device_status_sql(db_path, device_name=None):
@@ -168,41 +129,30 @@ def get_device_status_sql(db_path, device_name=None):
     :return: list of dicts, containing keys 'ip', 'rgb', and 'power' for device
     with device_name
     """
-    conn = None
-    try:
-        conn = _create_db_connection(db_path)
+    with _managed_db_connection(db_path) as conn:
+        if device_name is not None:
+            sql = "SELECT * FROM devices WHERE name = ?"
+            cursor = conn.cursor()
+            cursor.execute(sql, (device_name,))
 
-        with conn:
-            if device_name is not None:
-                sql = "SELECT * FROM devices WHERE name = ?"
-                cursor = conn.cursor()
-                cursor.execute(sql, (device_name,))
+        else:
+            sql = "SELECT * FROM devices"
+            cursor = conn.cursor()
+            cursor.execute(sql)
 
-            else:
-                sql = "SELECT * FROM devices"
-                cursor = conn.cursor()
-                cursor.execute(sql)
-
-            status = cursor.fetchall()
-            status_list = []
-            for i in range(len(status)):
-                return_dict = {
-                    'name': status[i][0],
-                    'ip': status[i][1],
-                    'rgb': (status[i][2],
-                            status[i][3],
-                            status[i][4]),
-                    'power': status[i][5]
-                }
-                status_list.append(return_dict)
-            return status_list
-
-    except sqlite3.Error as e:
-        log.error(e)
-
-    finally:
-        if conn is not None:
-            conn.close()
+        status = cursor.fetchall()
+        status_list = []
+        for i in range(len(status)):
+            return_dict = {
+                'name': status[i][0],
+                'ip': status[i][1],
+                'rgb': (status[i][2],
+                        status[i][3],
+                        status[i][4]),
+                'power': status[i][5]
+            }
+            status_list.append(return_dict)
+        return status_list
 
 
 def get_device_list_sql(db_path):
@@ -212,24 +162,12 @@ def get_device_list_sql(db_path):
     :param db_path: string, path to .db file
     :return: list of strings, containing all device_names present in data base.
     """
-    conn = None
-    try:
-        conn = _create_db_connection(db_path)
-
-        with conn:
-            sql = "SELECT name FROM devices"
-            cursor = conn.cursor()
-            cursor.execute(sql)
-            devices = cursor.fetchall()
+    with _managed_db_connection(db_path) as conn:
+        sql = "SELECT name FROM devices"
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        devices = cursor.fetchall()
 
         device_list = [row[0] for row in devices]
 
         return device_list
-
-    except sqlite3.Error as e:
-        log.error(e)
-
-    finally:
-        if conn is not None:
-            conn.close()
-
